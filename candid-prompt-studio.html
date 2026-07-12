@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CANDID — Prompt Engine POV Affiliate</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <div class="logo">C</div>
+        <div>
+          <div class="brand-name">CANDID</div>
+          <div class="brand-sub">Prompt Engine · POV Affiliate</div>
+        </div>
+      </div>
+      <div class="tagline">
+        Settings sama, hasil tak pernah sama. Pilih angle, POV, warna baju,
+        ambience &amp; puluhan kombinasi lain — engine ni campur random detail
+        lighting/pose setiap kali jana supaya prompt tak nampak template.
+      </div>
+
+      <!-- SECTION 1: PLATFORM & SIZE -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-num">01</span
+          ><span class="section-title">Platform &amp; Saiz</span>
+        </div>
+        <div class="panel">
+          <label class="field-label">Platform</label>
+          <div class="pill-group" data-group="platform">
+            <button class="pill small active" data-value="none">Umum</button>
+            <button class="pill small" data-value="tiktok">TikTok</button>
+            <button class="pill small" data-value="igreels">IG Reels</button>
+            <button class="pill small" data-value="igfeed">IG Feed</button>
+            <button class="pill small" data-value="facebook">Facebook</button>
+            <button class="pill small" data-value="shopeelazada">
+              Shopee/Lazada
+            </button>
+            <button class="pill small" data-value="ytshorts">
+              YouTube Shorts
+            </button>
+          </div>
+          <div class="note">
+            Pilih platform untuk auto-set saiz gambar/video yang sesuai +
+            sentuhan gaya khusus platform tu dalam prompt.
+          </div>
+
+          <label class="field-label">Saiz Gambar / Video</label>
+          <div class="pill-group" data-group="aspect">
+            <button class="pill active" data-value="9:16">9:16</button>
+            <button class="pill" data-value="16:9">16:9</button>
+            <button class="pill" data-value="1:1">1:1</button>
+            <button class="pill" data-value="4:3">4:3</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: PRODUCT -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-num">02</span
+          ><span class="section-title">Maklumat Produk</span>
+        </div>
+        <div class="panel">
+          <label class="field-label">Jenis Barang</label>
+          <input
+            type="text"
+            id="productType"
+            placeholder="cth: Lotion? Casing fon? Tumbler? Kasut?"
+          />
+          <div class="note" style="margin-top: 6px">
+            Tulis jenis barang secara ringkas — membantu sistem kesan kategori
+            dengan lebih tepat &amp; bagi konteks pada prompt.
+          </div>
+
+          <label class="field-label">Nama Brand (optional)</label>
+          <input
+            type="text"
+            id="productName"
+            placeholder="cth: LESSXCOCO, Skintific, Cuculemon"
+          />
+          <label class="field-label">Deskripsi Ringkas (optional)</label>
+          <textarea
+            id="productDesc"
+            rows="2"
+            placeholder="cth: mascara hitam, brush kecil, kemasan matte"
+          ></textarea>
+
+          <label class="field-label">Kategori Produk</label>
+          <button
+            class="advanced-toggle"
+            id="categoryToggle"
+            style="margin-top: 8px"
+          >
+            🏷️ Kategori: Auto-Detect ▾
+          </button>
+          <div class="advanced-panel" id="categoryPanel">
+            <div
+              class="pill-group"
+              data-group="productCategory"
+              id="categoryPillGroup"
+            >
+              <button class="pill active" data-value="auto">
+                🔍 Auto-Detect
+              </button>
+            </div>
+          </div>
+          <div class="note" id="categoryDetectNote">
+            Kategori membantu prompt cadangkan background, scene &amp; mood yang
+            lebih sesuai. Biar "Auto-Detect" atau pilih manual.
+          </div>
+
+          <label class="field-label">Scene (Idea Anda, optional)</label>
+          <textarea
+            id="userScene"
+            rows="2"
+            placeholder="cth: duduk depan cermin bilik, tangan pegang produk dekat muka, senyum sikit"
+          ></textarea>
+
+          <button
+            class="advanced-toggle"
+            id="autoSceneBtn"
+            style="margin-top: 16px"
+          >
+            🪄 Auto Cadangkan Scene Berdasarkan Produk
+          </button>
+          <div class="note">
+            Setiap klik tambah 1 cadangan baru (maksimum 10 cadangan).
+          </div>
+          <div class="note" id="autoSceneNote" style="display: none"></div>
+
+          <div id="sceneChoices" class="hidden" style="margin-top: 14px">
+            <label class="field-label"
+              >Pilih Scene (maksimum 5, termasuk Scene Anda)</label
+            >
+            <div id="sceneCardUser" class="scene-card hidden" data-value="user">
+              <div class="scene-card-title">📝 Scene Anda</div>
+              <div class="scene-card-text" id="sceneCardUserText"></div>
+            </div>
+            <div id="suggestedScenesList"></div>
+            <div
+              class="note"
+              id="sceneLimitNote"
+              style="display: none; color: var(--danger)"
+            >
+              ⚠️ Maksimum 5 scene sahaja boleh dipilih sekali gus — nyahpilih
+              satu dulu.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: OUTPUT TYPE & QUANTITY -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-num">03</span
+          ><span class="section-title">Jenis Output &amp; Kuantiti</span>
+        </div>
+        <div class="panel">
+          <label class="field-label">Jenis Prompt</label>
+          <div class="pill-group" data-group="outputType">
+            <button class="pill active" data-value="image">🖼️ Gambar</button>
+            <button class="pill" data-value="video">🎬 Video</button>
+          </div>
+
+          <label class="field-label">Format Prompt</label>
+          <div class="pill-group" data-group="promptFormat">
+            <button class="pill active" data-value="narrative">
+              Naratif (ayat)
+            </button>
+            <button class="pill" data-value="structured">
+              Berstruktur ([LABEL])
+            </button>
+          </div>
+          <div class="note">
+            Format Berstruktur pecahkan prompt kepada [SHOT TYPE], [SUBJECT],
+            [ACTION], [STYLE], [BACKGROUND], [PRODUCT] — sesuai untuk AI
+            image-edit yang perlu kekalkan produk 100% sama dengan gambar
+            rujukan (cth Nano Banana/Gemini).
+          </div>
+
+          <!-- MULTI-IMAGE COMPOSITE: images only -->
+          <div id="multiImageField" class="hidden">
+            <label class="field-label"
+              >Mod Gabung Gambar (Multi-Image Composite)</label
+            >
+            <div class="pill-group" data-group="multiImage">
+              <button class="pill active" data-value="off">Off</button>
+              <button class="pill" data-value="on">
+                On — Gabung Berbilang Gambar
+              </button>
+            </div>
+            <div class="note">
+              Untuk AI image-edit yang terima berbilang gambar rujukan (cth Nano
+              Banana/Gemini). Susunan upload: <b>Gambar 1</b> = produk,
+              <b>Gambar 2</b> = background (DIKUNCI — kekal 100% sama, tak
+              berubah walaupun regenerate berkali-kali), <b>Gambar 3-5</b> =
+              elemen tambahan (optional). Setiap kali generate, cuma
+              susunan/angle/komposisi produk &amp; elemen yang berubah —
+              background sentiasa kekal.
+            </div>
+
+            <div id="multiImageInputs" class="hidden">
+              <label class="field-label" style="margin-top: 16px"
+                >Gambar 3 — Elemen Tambahan (optional)</label
+              >
+              <input
+                type="text"
+                id="extraImg1"
+                placeholder="cth: model perempuan pegang produk / props bunga / kucing"
+              />
+              <label class="field-label"
+                >Gambar 4 — Elemen Tambahan (optional)</label
+              >
+              <input
+                type="text"
+                id="extraImg2"
+                placeholder="cth: cawan kopi / tangan kedua / kotak produk"
+              />
+              <label class="field-label"
+                >Gambar 5 — Elemen Tambahan (optional)</label
+              >
+              <input
+                type="text"
+                id="extraImg3"
+                placeholder="cth: hiasan meja / plushie / aksesori"
+              />
+              <div class="note">
+                Terangkan ringkas apa dalam setiap gambar tambahan supaya prompt
+                boleh arahkan AI letak elemen tu secara natural dalam scene.
+                Kosongkan yang tak guna.
+              </div>
+            </div>
+          </div>
+
+          <!-- STORYBOARD: images only -->
+          <div id="imageStoryboardField" class="hidden">
+            <label class="field-label">Mod Storyboard</label>
+            <div class="pill-group" data-group="storyboardMode">
+              <button class="pill active" data-value="off">
+                Off — Satu Gambar
+              </button>
+              <button class="pill" data-value="on">
+                On — Storyboard Berbilang Scene
+              </button>
+            </div>
+            <div class="note">
+              Storyboard cuma untuk Gambar — grid/kolaj berbilang scene. Video
+              sentiasa standalone (satu prompt sahaja).
+            </div>
+
+            <div id="storyboardBasedOnExistingField" class="hidden">
+              <label class="field-label" style="margin-top: 16px"
+                >Storyboard Ni Berdasarkan Gambar Yang Dah Digenerate?</label
+              >
+              <div class="pill-group" data-group="storyboardFromExisting">
+                <button class="pill active" data-value="off">
+                  Off — Jana Visual Baru
+                </button>
+                <button class="pill" data-value="on">
+                  On — Guna Gambar Sedia Ada
+                </button>
+              </div>
+              <div class="note">
+                Pilih "On" kalau kau upload gambar produk yang DAH siap
+                digenerate (pose/background dah settle) — Tetapan Visual (POV,
+                angle, outfit, background dll) tak perlu dijana semula. Prompt
+                cuma fokus pada susunan panel/scene, camera, action, lighting,
+                audio &amp; duration berdasarkan gambar tu.
+              </div>
+            </div>
+
+            <div id="storyboardStyleField" class="hidden">
+              <label class="field-label" style="margin-top: 16px"
+                >Gaya Storyboard</label
+              >
+              <div class="pill-group" data-group="storyboardStyle">
+                <button class="pill active" data-value="nodesc">
+                  Grid Ringkas (Tanpa Deskripsi)
+                </button>
+                <button class="pill" data-value="withdesc">
+                  Shot List Penuh (Dengan Deskripsi)
+                </button>
+                <button class="pill" data-value="sheet">
+                  Sheet Storyboard (1 Gambar Grid)
+                </button>
+                <button class="pill" data-value="socialstudio">
+                  Studio Sosial Media (Premium Branded)
+                </button>
+                <button class="pill" data-value="ugc">
+                  Format UGC (Hook→CTA)
+                </button>
+              </div>
+              <div class="note">
+                "Grid Ringkas"/"Shot List Penuh" — banyak prompt berasingan
+                (satu setiap scene). "Sheet Storyboard" — SATU gambar grid
+                berbilang scene. "Studio Sosial Media" — format premium branded
+                (header+logo+scene card+footer). "Format UGC" — struktur naratif
+                UGC (Hook → Intro → Feature → Demo → Lifestyle → CTA) yang
+                di-scale ikut jumlah scene.
+              </div>
+
+              <label class="field-label" style="margin-top: 16px"
+                >Gaya Seni Storyboard</label
+              >
+              <div class="pill-group" data-group="artStyle">
+                <button class="pill active" data-value="photoreal">
+                  Photorealistic
+                </button>
+                <button class="pill" data-value="pencil">
+                  Sketch Pensel Warna
+                </button>
+                <button class="pill" data-value="watercolor">Watercolor</button>
+                <button class="pill" data-value="vector">
+                  Flat Vector Illustration
+                </button>
+                <button class="pill" data-value="render3d">
+                  3D Clay Render
+                </button>
+                <button class="pill" data-value="lineart">
+                  Line Art (Hitam Putih)
+                </button>
+                <button class="pill" data-value="comic">Comic/Manga</button>
+              </div>
+              <div class="note">
+                Pilih gaya visual keseluruhan storyboard — cth "Sketch Pensel
+                Warna" untuk look ilustrasi tangan.
+              </div>
+
+              <div id="socialStudioField" class="hidden">
+                <label class="field-label" style="margin-top: 16px"
+                  >Sub-Mode Kandungan</label
+                >
+                <div class="pill-group" data-group="socialMode">
+                  <button class="pill active" data-value="auto">Auto</button>
+                  <button class="pill" data-value="tiktok">TikTok Viral</button>
+                  <button class="pill" data-value="igreels">
+                    Instagram Reels
+                  </button>
+                  <button class="pill" data-value="minicommercial">
+                    Mini Commercial
+                  </button>
+                  <button class="pill" data-value="lifestyleugc">
+                    Lifestyle UGC
+                  </button>
+                  <button class="pill" data-value="giftrec">
+                    Gift Recommendation
+                  </button>
+                </div>
+                <div class="note">
+                  Setiap sub-mode ada struktur 8-scene tersendiri. "Auto" akan
+                  cuba kesan sub-mode paling sesuai berdasarkan nama/deskripsi
+                  produk.
+                </div>
+
+                <label class="field-label" style="margin-top: 16px"
+                  >Nama Jenama (untuk header/logo)</label
+                >
+                <input
+                  type="text"
+                  id="brandNameInput"
+                  placeholder="cth: Cuculemon, LESSXCOCO, dll (optional)"
+                />
+              </div>
+
+              <label class="field-label" style="margin-top: 16px"
+                >Nombor Pada Gambar</label
+              >
+              <div class="pill-group" data-group="panelNumber">
+                <button class="pill" data-value="off">Off</button>
+                <button class="pill active" data-value="on">
+                  On — Papar Nombor "1)" dll
+                </button>
+              </div>
+              <div class="note">
+                Bila On, prompt akan arah AI letak nombor kecil (cth "1)") dalam
+                bulatan di penjuru setiap panel — macam grid produk bernombor.
+                (Tak terpakai untuk Sheet Storyboard.)
+              </div>
+
+              <label class="field-label" style="margin-top: 16px"
+                >Caption/Tagline Auto-Generate</label
+              >
+              <div class="pill-group" data-group="autoCaption">
+                <button class="pill active" data-value="on">
+                  On — Guna Caption Generic
+                </button>
+                <button class="pill" data-value="off">
+                  Off — Tanpa Caption
+                </button>
+              </div>
+              <div class="note">
+                Off kalau caption/tagline generic yang dijana tak sesuai dengan
+                produk kau — kekalkan cuma CAMERA/ACTION/SHOT tanpa headline
+                caption. (Tak terpakai untuk Studio Sosial Media &amp; UGC —
+                dua-dua ni tak guna caption generic.)
+              </div>
+
+              <div id="panelCountField">
+                <div class="qty-row" style="margin-top: 16px">
+                  <label class="field-label" id="quantityLabel"
+                    >Jumlah Scene/Panel Storyboard</label
+                  >
+                  <span class="qty-value" id="quantityValue">6</span>
+                </div>
+                <input
+                  type="range"
+                  id="quantityInput"
+                  min="2"
+                  max="20"
+                  value="6"
+                />
+                <div class="note" id="quantityNote">
+                  Bilangan scene/panel dalam storyboard (max 20). Scene pertama
+                  jadi HOOK, tengah DEMO/benefit, akhir CTA/ending.
+                </div>
+
+                <div class="qty-row" style="margin-top: 16px">
+                  <label class="field-label"
+                    >Durasi Keseluruhan Storyboard (saat)</label
+                  >
+                  <span class="qty-value" id="storyboardDurationValue">15</span>
+                </div>
+                <input
+                  type="range"
+                  id="storyboardDurationInput"
+                  min="3"
+                  max="60"
+                  value="15"
+                />
+                <div class="note">
+                  Jumlah durasi video penuh (max 60s) — durasi ni akan dibahagi
+                  auto-rata ke setiap scene, dan dipaparkan sebagai DURATION
+                  setiap panel.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIDEO: standalone, optional sheet reference -->
+          <div id="videoSheetField" class="hidden">
+            <div class="qty-row">
+              <label class="field-label">Durasi Video (saat)</label>
+              <span class="qty-value" id="videoDurationValue">10</span>
+            </div>
+            <input
+              type="range"
+              id="videoDurationInput"
+              min="3"
+              max="60"
+              value="10"
+            />
+            <div class="note">
+              Jumlah durasi video (max 60s). Video akan dibahagi auto kepada
+              beberapa pergerakan kamera berturutan (~3 saat setiap satu)
+              mengikut durasi ni.
+            </div>
+
+            <label class="field-label" style="margin-top: 16px"
+              >Video Ni Berdasarkan Sheet/Storyboard Yang Diupload?</label
+            >
+            <div class="pill-group" data-group="basedOnSheet">
+              <button class="pill active" data-value="off">
+                Off — Produk Sahaja
+              </button>
+              <button class="pill" data-value="on">
+                On — Rujuk Gambar Sheet Diupload
+              </button>
+            </div>
+            <div class="note">
+              Pilih "On" kalau kau nak upload gambar storyboard/sheet ke
+              Seedance sekali dengan prompt ni — AI akan dolly lalu setiap panel
+              dalam sheet, dalam SATU video berterusan.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: VISUAL SETTINGS -->
+      <div class="section" id="visualSettingsSection">
+        <div class="section-head">
+          <span class="section-num">04</span
+          ><span class="section-title">Tetapan Visual</span>
+        </div>
+        <div class="panel">
+          <label class="field-label"
+            >Produk Perlu 100% Sama Gambar Rujukan?</label
+          >
+          <div class="pill-group" data-group="keepProduct">
+            <button class="pill active" data-value="off">Off</button>
+            <button class="pill" data-value="on">On — Kekalkan Produk</button>
+          </div>
+          <div class="note" style="margin-top: 6px; margin-bottom: 0">
+            Pilih "On" untuk arah AI kekalkan bentuk, warna, material &amp;
+            design produk 100% sama macam gambar rujukan yang kau upload — elak
+            AI reka bentuk baru.
+          </div>
+
+          <label class="field-label" style="margin-top: 20px"
+            >Guna Background Sendiri?</label
+          >
+          <div class="pill-group" data-group="keepBg">
+            <button class="pill active" data-value="off">
+              Off — Jana Background Baru
+            </button>
+            <button class="pill" data-value="on">On — Kekalkan</button>
+          </div>
+          <div class="note" style="margin-top: 6px; margin-bottom: 0">
+            Pilih "On" kalau kau dah ada gambar produk dengan background sendiri
+            (cth: sudah edit/composite) dan tak nak AI tukar background tu —
+            prompt akan arah AI kekalkan background asal.
+          </div>
+
+          <label class="field-label" style="margin-top: 20px">Jenis POV</label>
+          <div class="pill-group" data-group="povType">
+            <button class="pill active" data-value="hand">POV Tangan</button>
+            <button class="pill" data-value="selfie" id="povSelfie">
+              POV Selfie
+            </button>
+            <button class="pill" data-value="thirdperson" id="povThird">
+              Candid Third-Person
+            </button>
+            <button class="pill" data-value="headshot" id="povHeadshot">
+              Sampai Kepala (Muka Nampak)
+            </button>
+            <button class="pill" data-value="fullbody" id="povFullbody">
+              Full Body
+            </button>
+            <button class="pill" data-value="mirror" id="povMirror">
+              Cermin (OOTD Mirror Shot)
+            </button>
+            <button class="pill" data-value="reaction" id="povReaction">
+              Reaksi Wajah (Close-Up)
+            </button>
+            <button class="pill" data-value="overhead" id="povOverhead">
+              POV Overhead (Tangan dari Atas)
+            </button>
+            <button
+              class="pill"
+              data-value="walkingindoor"
+              id="povWalkingIndoor"
+            >
+              Sedang Berjalan (Indoor)
+            </button>
+            <button
+              class="pill"
+              data-value="walkingoutdoor"
+              id="povWalkingOutdoor"
+            >
+              Sedang Berjalan (Outdoor)
+            </button>
+            <button class="pill" data-value="car" id="povCar">
+              Dalam Kereta
+            </button>
+            <button class="pill" data-value="gettingready" id="povGettingReady">
+              Getting Ready (Cermin Bilik Air)
+            </button>
+            <button class="pill" data-value="unboxing" id="povUnboxing">
+              Unboxing (Dua Tangan)
+            </button>
+          </div>
+          <div class="note">
+            Nak "hanya barang atas meja" (tiada orang)? Set Model = None di
+            bawah — semua jenis POV di atas automatik tak terpakai.
+          </div>
+
+          <label class="field-label">Angle / Shot (Camera)</label>
+          <div class="pill-group" data-group="angle">
+            <button class="pill small active" data-value="random">
+              🎲 Random
+            </button>
+            <button class="pill small" data-value="macro">Macro</button>
+            <button class="pill small" data-value="closeup">Close-Up</button>
+            <button class="pill small" data-value="whippan">Whip Pan</button>
+            <button class="pill small" data-value="ecu">
+              Extreme Close-Up (ECU)
+            </button>
+            <button class="pill small" data-value="mediumshot">
+              Medium Shot (MS)
+            </button>
+            <button class="pill small" data-value="fullwide">
+              Full/Wide Shot (WS)
+            </button>
+            <button class="pill small" data-value="ews">
+              Extreme Wide Shot (EWS)
+            </button>
+            <button class="pill small" data-value="eyelevel">Eye-Level</button>
+            <button class="pill small" data-value="lowangle">
+              Low-Angle (Hero Shot)
+            </button>
+            <button class="pill small" data-value="highangle">
+              High-Angle
+            </button>
+            <button class="pill small" data-value="topdown">
+              Top-Down (Flat Lay)
+            </button>
+            <button class="pill small" data-value="dutch">Dutch Angle</button>
+            <button class="pill small" data-value="orbit">
+              The Orbit (360°)
+            </button>
+            <button class="pill small" data-value="pushin">
+              Push-In (Dolly In)
+            </button>
+            <button class="pill small" data-value="pullout">
+              Pull-Out (Dolly Out)
+            </button>
+            <button class="pill small" data-value="pantilt">
+              Pan &amp; Tilt
+            </button>
+            <button class="pill small" data-value="tracking">
+              Tracking Shot
+            </button>
+            <button class="pill small" data-value="crane">
+              Crane/Jib Shot
+            </button>
+            <button class="pill small" data-value="ots">
+              Over-the-Shoulder (OTS)
+            </button>
+            <button class="pill small" data-value="povshot">
+              Point-of-View (POV)
+            </button>
+            <button class="pill small" data-value="macroaction">
+              Macro Action Shot
+            </button>
+          </div>
+
+          <label class="field-label">Gaya Pegangan</label>
+          <div class="pill-group" data-group="hold">
+            <button class="pill active" data-value="handheld">
+              Dipegang Tangan
+            </button>
+            <button class="pill" data-value="placedtable">
+              Diletakkan - Atas Meja
+            </button>
+            <button class="pill" data-value="placedchair">
+              Diletakkan - Atas Kerusi
+            </button>
+            <button class="pill" data-value="placeddoor">
+              Diletakkan - Dekat Pintu/Tangga
+            </button>
+            <button class="pill" data-value="placedshelf">
+              Diletakkan - Atas Rak
+            </button>
+            <button class="pill" data-value="placedcustom">
+              Diletakkan - Custom
+            </button>
+          </div>
+          <input
+            type="text"
+            id="customPlacementInput"
+            class="hidden"
+            placeholder="cth: atas tangga marmar, sebelah tingkap"
+            style="margin-top: 8px"
+          />
+
+          <label class="field-label">Gaya Visual</label>
+          <div class="pill-group" data-group="style">
+            <button class="pill active" data-value="lifestyle">
+              Lifestyle
+            </button>
+            <button class="pill" data-value="flatlay">Flat Lay</button>
+            <button class="pill" data-value="studio">Studio</button>
+            <button class="pill" data-value="outdoor">Outdoor</button>
+            <button class="pill" data-value="ugc">UGC / Testimoni</button>
+          </div>
+
+          <label class="field-label">Model</label>
+          <div class="pill-group" data-group="model">
+            <button class="pill active" data-value="woman">Woman</button>
+            <button class="pill" data-value="man">Man</button>
+            <button class="pill" data-value="mascot">
+              Mascot (Karakter Comel)
+            </button>
+            <button class="pill" data-value="none">None</button>
+          </div>
+          <div class="note" id="mascotNote" style="display: none">
+            Mascot = karakter comel original (bukan manusia sebenar) yang
+            pegang/berinteraksi dengan produk — sesuai untuk brand identity.
+            Design sentiasa original, bukan karakter berlesen (bukan Hello
+            Kitty/My Melody/dll).
+          </div>
+
+          <div id="outfitField">
+            <label class="field-label">Gaya Pakaian</label>
+            <div class="pill-group" data-group="outfit">
+              <button class="pill active" data-value="casual">Casual</button>
+              <button class="pill" data-value="knitwear">
+                Knitwear / Lengan Panjang
+              </button>
+              <button class="pill" data-value="formal">Formal</button>
+              <button class="pill" data-value="hoodie">Oversized Hoodie</button>
+              <button class="pill" data-value="custom">✎ Custom</button>
+              <button class="pill" data-value="none">
+                Tiada (AI Pilih Sendiri)
+              </button>
+            </div>
+            <input
+              type="text"
+              id="customOutfitInput"
+              class="hidden"
+              placeholder="cth: cropped denim vest berlapis dengan tank top putih"
+              style="margin-top: 8px"
+            />
+
+            <label class="field-label">Warna Baju</label>
+            <div class="color-group" data-group="outfitColor">
+              <div
+                class="swatch active"
+                data-value="black"
+                style="background: #1c1c1c"
+                title="Hitam"
+              ></div>
+              <div
+                class="swatch"
+                data-value="white"
+                style="background: #f2f0ec"
+                title="Putih"
+              ></div>
+              <div
+                class="swatch"
+                data-value="beige"
+                style="background: #d8c3a5"
+                title="Beige"
+              ></div>
+              <div
+                class="swatch"
+                data-value="pink"
+                style="background: #e8b4bc"
+                title="Pastel Pink"
+              ></div>
+              <div
+                class="swatch"
+                data-value="sage"
+                style="background: #8ba888"
+                title="Sage Green"
+              ></div>
+              <div
+                class="swatch"
+                data-value="navy"
+                style="background: #2c3a54"
+                title="Navy"
+              ></div>
+              <div
+                class="swatch"
+                data-value="red"
+                style="background: #a13d3d"
+                title="Merah"
+              ></div>
+              <div
+                class="swatch"
+                data-value="denim"
+                style="background: #4a6a8a"
+                title="Denim Blue"
+              ></div>
+              <div
+                class="swatch"
+                data-value="custom"
+                style="
+                  background: repeating-linear-gradient(
+                    45deg,
+                    #2a2521,
+                    #2a2521 4px,
+                    #3a332c 4px,
+                    #3a332c 8px
+                  );
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 14px;
+                  color: var(--amber);
+                "
+                title="Custom"
+              >
+                ✎
+              </div>
+            </div>
+            <input
+              type="text"
+              id="customColorInput"
+              class="hidden"
+              placeholder="cth: dusty rose, sage green bergaris putih, ombre pink-ungu"
+              style="margin-top: 8px"
+            />
+          </div>
+
+          <label class="field-label">Camera Flash</label>
+          <div class="pill-group" data-group="flash">
+            <button class="pill" data-value="on">On</button>
+            <button class="pill active" data-value="off">Off</button>
+          </div>
+
+          <label class="field-label">Waktu</label>
+          <div class="pill-group" data-group="time">
+            <button class="pill active" data-value="day">Siang</button>
+            <button class="pill" data-value="night">Malam</button>
+          </div>
+
+          <div id="locationField">
+            <label class="field-label">Lokasi Latar Belakang</label>
+            <div class="pill-group" data-group="location">
+              <button class="pill active" data-value="bedroom">Bedroom</button>
+              <button class="pill" data-value="carinterior">
+                Car Interior
+              </button>
+              <button class="pill" data-value="rug">White Fluffy Rug</button>
+              <button class="pill" data-value="vanity">Vanity Table</button>
+              <button class="pill" data-value="kitchen">Kitchen</button>
+              <button class="pill" data-value="office">Office Desk</button>
+              <button class="pill" data-value="cafe">Cafe</button>
+              <button class="pill" data-value="livingroom">Living Room</button>
+              <button class="pill" data-value="bathroom">
+                Bathroom Counter
+              </button>
+              <button class="pill" data-value="outdoorbg">Outdoor</button>
+            </div>
+            <div class="note" id="povLocationWarning">
+              Sesetengah lokasi akan disembunyikan secara automatik bila jenis
+              POV yang dipilih hanya masuk akal dengan satu lokasi tertentu (cth
+              "Dalam Kereta" → cuma "Car Interior" tersedia).
+            </div>
+          </div>
+
+          <div id="ambienceField">
+            <label class="field-label">Ambience / Mood</label>
+            <div class="pill-group" data-group="ambience">
+              <button class="pill active" data-value="cozy">
+                Cozy &amp; Warm
+              </button>
+              <button class="pill" data-value="bright">
+                Bright &amp; Airy
+              </button>
+              <button class="pill" data-value="moody">Moody &amp; Dark</button>
+              <button class="pill" data-value="minimalist">
+                Clean Minimalist
+              </button>
+              <button class="pill" data-value="pastel">Soft Pastel</button>
+              <button class="pill" data-value="luxury">Luxury Elegant</button>
+              <button class="pill" data-value="rustic">Rustic Vintage</button>
+            </div>
+          </div>
+
+          <div id="weatherField" class="hidden">
+            <label class="field-label">Cuaca (untuk outdoor)</label>
+            <div class="pill-group" data-group="weather">
+              <button class="pill active" data-value="sunny">Cerah</button>
+              <button class="pill" data-value="overcast">Redup</button>
+              <button class="pill" data-value="goldenhour">Golden Hour</button>
+              <button class="pill" data-value="rain">Lepas Hujan</button>
+            </div>
+          </div>
+
+          <div id="customBgField">
+            <label class="field-label"
+              >Custom Latar Belakang (optional — override lokasi atas)</label
+            >
+            <textarea
+              id="customBg"
+              rows="2"
+              placeholder="cth: on a beach towel with turquoise sea softly blurred in the background"
+            ></textarea>
+          </div>
+
+          <label class="field-label" style="margin-top: 20px"
+            >Label Nama Produk (Text Banner)</label
+          >
+          <div class="pill-group" data-group="textbanner">
+            <button class="pill active" data-value="off">Off</button>
+            <button class="pill" data-value="on">On — Papar Nama</button>
+          </div>
+          <div class="note">
+            Papar text overlay nama produk dalam gambar — berfungsi untuk
+            mana-mana gaya visual, bukan cuma Kawaii.
+          </div>
+
+          <div id="textbannerStyleField" class="hidden">
+            <label class="field-label" style="margin-top: 14px"
+              >Gaya Text/Title</label
+            >
+            <div class="pill-group" data-group="textbannerStyle">
+              <button class="pill active" data-value="sticker">
+                Sticker Bubble
+              </button>
+              <button class="pill" data-value="bold">
+                Bold Banner (Sans-Serif)
+              </button>
+              <button class="pill" data-value="script">Elegant Script</button>
+              <button class="pill" data-value="handwritten">
+                Doodle Handwritten
+              </button>
+              <button class="pill" data-value="neon">Neon/Glow</button>
+              <button class="pill" data-value="minimal">
+                Minimalist Caption
+              </button>
+              <button class="pill" data-value="custom">✎ Custom</button>
+            </div>
+            <input
+              type="text"
+              id="customTextStyleInput"
+              class="hidden"
+              placeholder="cth: retro 90s bubble letter dengan outline pelangi"
+              style="margin-top: 8px"
+            />
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              margin-top: 24px;
+            "
+          >
+            <button
+              class="advanced-toggle"
+              id="kawaiiToggle"
+              style="margin-top: 0; flex: 1"
+            >
+              🎀 Estetik Kawaii / Comel ▾
+            </button>
+            <label
+              style="
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 11.5px;
+                color: var(--muted);
+                white-space: nowrap;
+                cursor: pointer;
+              "
+            >
+              <input type="checkbox" id="kawaiiPin" style="cursor: pointer" />
+              Kekalkan Terbuka
+            </label>
+          </div>
+
+          <div class="advanced-panel" id="kawaiiPanel">
+            <label class="field-label">Aktifkan Gaya Kawaii Pastel</label>
+            <div class="pill-group" data-group="kawaii">
+              <button class="pill active" data-value="off">Off</button>
+              <button class="pill" data-value="on">On — Kawaii</button>
+            </div>
+
+            <label class="field-label" style="margin-top: 16px"
+              >Doodle Comel (boleh pilih lebih dari satu)</label
+            >
+            <div class="pill-group" data-group="doodle" data-multi="true">
+              <button class="pill small" data-value="sticker">
+                Sticker Rating Badge
+              </button>
+              <button class="pill small" data-value="reviewstyle">
+                Review Screenshot Style
+              </button>
+              <button class="pill small" data-value="hearts">
+                Hearts &amp; Stars
+              </button>
+              <button class="pill small" data-value="cutechar">
+                Cute Characters
+              </button>
+              <button class="pill small" data-value="kawaiiset">
+                Kawaii Sticker Pack (chick/bunga/bow)
+              </button>
+              <button class="pill small" data-value="confetti">
+                Confetti/Sparkle Burst
+              </button>
+              <button class="pill small" data-value="washitape">
+                Washi Tape / Polaroid Frame
+              </button>
+              <button class="pill small" data-value="handwritten">
+                Nota Tulisan Tangan + Anak Panah
+              </button>
+              <button class="pill small" data-value="ribbon">
+                Ribbon/Bow Corner
+              </button>
+              <button class="pill small" data-value="stars-sparkle">
+                Twinkling Stars
+              </button>
+              <button class="pill small" data-value="clouds">
+                Cute Clouds
+              </button>
+              <button class="pill small" data-value="rainbow">
+                Rainbow Arc
+              </button>
+              <button class="pill small" data-value="polaroid-clip">
+                Polaroid + Peg/Clip
+              </button>
+              <button class="pill small" data-value="cloud-heart">
+                Heart Balloons
+              </button>
+              <button class="pill small" data-value="stamp">
+                Postage Stamp Frame
+              </button>
+              <button class="pill small" data-value="glitter-frame">
+                Glitter Border Frame
+              </button>
+            </div>
+            <div class="note">
+              Tak pilih mana-mana = tiada doodle (default).
+            </div>
+
+            <div id="propsField">
+              <label class="field-label" style="margin-top: 16px"
+                >Prop Dekorasi (boleh pilih lebih dari satu)</label
+              >
+              <div class="pill-group" data-group="props" data-multi="true">
+                <button class="pill small" data-value="flowers">
+                  Bunga Segar
+                </button>
+                <button class="pill small" data-value="candles">Lilin</button>
+                <button class="pill small" data-value="plush">
+                  Mainan Comel
+                </button>
+                <button class="pill small" data-value="skincareclutter">
+                  Kekacauan Skincare
+                </button>
+                <button class="pill small" data-value="fairylights">
+                  Fairy Lights
+                </button>
+                <button class="pill small" data-value="bubbles">
+                  Bubble/Glow Effect
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px">
+            <button class="advanced-toggle" id="advToggle" style="flex: 1">
+              ⚙️ Tetapan Lanjutan (hijab, skin tone, camera style, umur,
+              aksesori) ▾
+            </button>
+            <label
+              style="
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 11.5px;
+                color: var(--muted);
+                white-space: nowrap;
+                cursor: pointer;
+              "
+            >
+              <input type="checkbox" id="advPin" style="cursor: pointer" />
+              Kekalkan Terbuka
+            </label>
+          </div>
+
+          <div class="advanced-panel" id="advPanel">
+            <div id="hijabField">
+              <label class="field-label">Hijab</label>
+              <div class="pill-group" data-group="hijab">
+                <button class="pill active" data-value="unspecified">
+                  Tak Nyatakan
+                </button>
+                <button class="pill" data-value="yes">Berhijab</button>
+              </div>
+            </div>
+
+            <label class="field-label">Skin Tone</label>
+            <div class="pill-group" data-group="skintone">
+              <button class="pill small active" data-value="random">
+                Random
+              </button>
+              <button class="pill small" data-value="fair">Cerah</button>
+              <button class="pill small" data-value="medium">Sederhana</button>
+              <button class="pill small" data-value="tan">Sawo Matang</button>
+              <button class="pill small" data-value="deep">Gelap</button>
+            </div>
+
+            <div id="ageField">
+              <label class="field-label">Julat Umur Model</label>
+              <div class="pill-group" data-group="agerange">
+                <button class="pill active" data-value="young">20-an</button>
+                <button class="pill" data-value="adult">30-an</button>
+                <button class="pill" data-value="mature">40-an+</button>
+              </div>
+            </div>
+
+            <label class="field-label">Gaya Kamera</label>
+            <div class="pill-group" data-group="camerastyle">
+              <button class="pill small active" data-value="random">
+                Random
+              </button>
+              <button class="pill small" data-value="phone">Phone</button>
+              <button class="pill small" data-value="dslr">DSLR Bokeh</button>
+              <button class="pill small" data-value="film">Film/Vintage</button>
+              <button class="pill small" data-value="webcam">Webcam</button>
+            </div>
+
+            <div id="accessoryField">
+              <label class="field-label"
+                >Aksesori Tangan (boleh pilih lebih dari satu)</label
+              >
+              <div class="pill-group" data-group="accessory" data-multi="true">
+                <button class="pill" data-value="ring">Cincin</button>
+                <button class="pill" data-value="bracelet">Gelang</button>
+                <button class="pill" data-value="manicure">
+                  Manicure Nails
+                </button>
+                <button class="pill" data-value="watch">Jam Tangan</button>
+                <button class="pill" data-value="henna">Henna</button>
+                <button class="pill" data-value="rings-stack">
+                  Stacked Rings (Berlapis)
+                </button>
+                <button class="pill" data-value="bangle">
+                  Bangle/Gelang Tebal
+                </button>
+              </div>
+              <div class="note">
+                Tak pilih mana-mana = tiada aksesori (default).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        <button class="generate-btn" id="generateBtn" style="flex: 1">
+          ✨ JANA PROMPT
+        </button>
+        <button
+          class="advanced-toggle"
+          id="resetBtn"
+          style="flex: 0 0 auto; width: auto; margin-top: 0; padding: 16px 18px"
+        >
+          ↺ Reset
+        </button>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="filmstrip" id="filmstrip">
+        <div class="sprockets">
+          <span></span><span></span><span></span><span></span><span></span
+          ><span></span><span></span><span></span><span></span><span></span
+          ><span></span><span></span>
+        </div>
+        <div id="framesContainer"></div>
+        <div class="output-actions">
+          <button class="copy-btn" id="copyAllBtn">📋 Copy Semua</button>
+          <button id="regenBtn">🔁 Regenerate Variasi</button>
+        </div>
+        <div class="sprockets">
+          <span></span><span></span><span></span><span></span><span></span
+          ><span></span><span></span><span></span><span></span><span></span
+          ><span></span><span></span>
+        </div>
+      </div>
+      <div class="note">
+        Prompt dijana dalam Bahasa Inggeris sebab kebanyakan AI image/video tool
+        (Midjourney, Nano Banana, Kling, Runway, DALL-E dll) faham dan hasilkan
+        hasil lebih tepat dengan prompt English. Copy terus, paste kat mana-mana
+        AI generator.
+      </div>
+
+      <!-- HISTORY -->
+      <div class="section" style="margin-top: 34px">
+        <div class="section-head between">
+          <div>
+            <span class="section-num">05</span>
+            <span class="section-title">Riwayat</span>
+          </div>
+          <button class="clear-all" id="clearHistory">Padam Semua</button>
+        </div>
+        <div class="note" style="margin-bottom: 14px">
+          ⚠️ Riwayat disimpan secara lokal (localStorage) dalam browser ni
+          sahaja — bukan cloud. Kalau guna device/browser lain, atau clear
+          cookies/cache, riwayat akan reset dan hilang.
+        </div>
+
+        <div id="historyList"></div>
+      </div>
+    </div>
+
+    <button class="float-collapse-btn hidden" id="floatCollapseBtn">
+      🔽 Kecilkan
+    </button>
+
+    <script src="js/script.js"></script>
+  </body>
+</html>

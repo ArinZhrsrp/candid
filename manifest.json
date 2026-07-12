@@ -1,0 +1,24 @@
+{
+  "name": "CANDID — Prompt Engine POV Affiliate",
+  "short_name": "CANDID",
+  "description": "Jana prompt AI siap-copy untuk gambar & video produk POV.",
+  "start_url": "/candid-prompt-studio.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fdfbff",
+  "theme_color": "#c9a3ec",
+  "icons": [
+    {
+      "src": "media/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "media/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

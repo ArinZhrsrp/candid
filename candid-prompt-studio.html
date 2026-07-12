@@ -16,10 +16,11 @@
     <div class="wrap">
       <div class="header">
         <div class="logo">C</div>
-        <div>
+        <div style="flex: 1">
           <div class="brand-name">CANDID</div>
           <div class="brand-sub">Prompt Engine · POV Affiliate</div>
         </div>
+        <span class="version-tag">© 2026&emsp;Version v1.0.1</span>
       </div>
       <div class="tagline">
         Settings sama, hasil tak pernah sama. Pilih angle, POV, warna baju,
@@ -404,6 +405,25 @@
                 dua-dua ni tak guna caption generic.)
               </div>
 
+              <div id="captionLanguageField">
+                <label class="field-label" style="margin-top: 16px"
+                  >Bahasa Caption</label
+                >
+                <div class="pill-group" data-group="captionLanguage">
+                  <button class="pill small active" data-value="auto">
+                    Auto (Melayu/English)
+                  </button>
+                  <button class="pill small" data-value="ms">
+                    Bahasa Melayu
+                  </button>
+                  <button class="pill small" data-value="en">English</button>
+                </div>
+                <div class="note">
+                  Auto biar AI pilih bahasa ikut produk. Pilih manual kalau
+                  nak caption konsisten dalam satu bahasa sahaja.
+                </div>
+              </div>
+
               <div id="panelCountField">
                 <div class="qty-row" style="margin-top: 16px">
                   <label class="field-label" id="quantityLabel"
@@ -519,6 +539,28 @@
             prompt akan arah AI kekalkan background asal.
           </div>
 
+          <label class="field-label" style="margin-top: 20px">Model</label>
+          <div class="pill-group" data-group="model">
+            <button class="pill active" data-value="woman">Woman</button>
+            <button class="pill" data-value="man">Man</button>
+            <button class="pill" data-value="mascot">
+              Mascot (Karakter Comel)
+            </button>
+            <button class="pill" data-value="none">None</button>
+          </div>
+          <div class="note" id="mascotNote" style="display: none">
+            Mascot = karakter comel original (bukan manusia sebenar) yang
+            pegang/berinteraksi dengan produk — sesuai untuk brand identity.
+            Design sentiasa original, bukan karakter berlesen (bukan Hello
+            Kitty/My Melody/dll).
+          </div>
+          <div class="note">
+            "None" = produk sahaja, tiada orang/tangan dalam gambar — sesuai
+            untuk gaya Flat Lay / top-down product shot. Bila pilih ni,
+            bahagian "Jenis POV" di bawah akan hilang sebab dah tak relevan.
+          </div>
+
+          <div id="povTypeField">
           <label class="field-label" style="margin-top: 20px">Jenis POV</label>
           <div class="pill-group" data-group="povType">
             <button class="pill active" data-value="hand">POV Tangan</button>
@@ -566,10 +608,10 @@
             <button class="pill" data-value="unboxing" id="povUnboxing">
               Unboxing (Dua Tangan)
             </button>
+            <button class="pill" data-value="overshoulder" id="povOverShoulder">
+              Over-the-Shoulder
+            </button>
           </div>
-          <div class="note">
-            Nak "hanya barang atas meja" (tiada orang)? Set Model = None di
-            bawah — semua jenis POV di atas automatik tak terpakai.
           </div>
 
           <label class="field-label">Angle / Shot (Camera)</label>
@@ -670,22 +712,6 @@
             <button class="pill" data-value="studio">Studio</button>
             <button class="pill" data-value="outdoor">Outdoor</button>
             <button class="pill" data-value="ugc">UGC / Testimoni</button>
-          </div>
-
-          <label class="field-label">Model</label>
-          <div class="pill-group" data-group="model">
-            <button class="pill active" data-value="woman">Woman</button>
-            <button class="pill" data-value="man">Man</button>
-            <button class="pill" data-value="mascot">
-              Mascot (Karakter Comel)
-            </button>
-            <button class="pill" data-value="none">None</button>
-          </div>
-          <div class="note" id="mascotNote" style="display: none">
-            Mascot = karakter comel original (bukan manusia sebenar) yang
-            pegang/berinteraksi dengan produk — sesuai untuk brand identity.
-            Design sentiasa original, bukan karakter berlesen (bukan Hello
-            Kitty/My Melody/dll).
           </div>
 
           <div id="outfitField">
@@ -847,6 +873,40 @@
             </div>
           </div>
 
+          <div id="propsField">
+            <label class="field-label" style="margin-top: 16px"
+              >Prop Dekorasi (boleh pilih lebih dari satu)</label
+            >
+            <div class="pill-group" data-group="props" data-multi="true">
+              <button class="pill small" data-value="flowers">
+                Bunga Segar
+              </button>
+              <button class="pill small" data-value="candles">Lilin</button>
+              <button class="pill small" data-value="pearls">
+                Mutiara (Pearls)
+              </button>
+              <button class="pill small" data-value="vintagemirror">
+                Cermin Vintage
+              </button>
+              <button class="pill small" data-value="plush">
+                Mainan Comel
+              </button>
+              <button class="pill small" data-value="skincareclutter">
+                Kekacauan Skincare
+              </button>
+              <button class="pill small" data-value="fairylights">
+                Fairy Lights
+              </button>
+              <button class="pill small" data-value="bubbles">
+                Bubble/Glow Effect
+              </button>
+            </div>
+            <div class="note">
+              Tak pilih mana-mana = tiada prop tambahan (default). Berfungsi
+              untuk mana-mana gaya visual — bukan cuma Kawaii.
+            </div>
+          </div>
+
           <div id="weatherField" class="hidden">
             <label class="field-label">Cuaca (untuk outdoor)</label>
             <div class="pill-group" data-group="weather">
@@ -1004,30 +1064,6 @@
             <div class="note">
               Tak pilih mana-mana = tiada doodle (default).
             </div>
-
-            <div id="propsField">
-              <label class="field-label" style="margin-top: 16px"
-                >Prop Dekorasi (boleh pilih lebih dari satu)</label
-              >
-              <div class="pill-group" data-group="props" data-multi="true">
-                <button class="pill small" data-value="flowers">
-                  Bunga Segar
-                </button>
-                <button class="pill small" data-value="candles">Lilin</button>
-                <button class="pill small" data-value="plush">
-                  Mainan Comel
-                </button>
-                <button class="pill small" data-value="skincareclutter">
-                  Kekacauan Skincare
-                </button>
-                <button class="pill small" data-value="fairylights">
-                  Fairy Lights
-                </button>
-                <button class="pill small" data-value="bubbles">
-                  Bubble/Glow Effect
-                </button>
-              </div>
-            </div>
           </div>
 
           <div style="display: flex; align-items: center; gap: 10px">
@@ -1140,6 +1176,9 @@
           ><span></span><span></span><span></span><span></span><span></span
           ><span></span><span></span>
         </div>
+        <button class="skip-to-copy-btn" id="skipToCopyBtn">
+          ⬇️ Skip Ke Bawah (Copy)
+        </button>
         <div id="framesContainer"></div>
         <div class="output-actions">
           <button class="copy-btn" id="copyAllBtn">📋 Copy Semua</button>
@@ -1177,9 +1216,18 @@
       </div>
     </div>
 
+    <footer class="tool-footer">
+      <span class="version-tag">© 2026&emsp;Version v1.0.1</span>
+    </footer>
+
     <button class="float-collapse-btn hidden" id="floatCollapseBtn">
       🔽 Kecilkan
     </button>
+
+    <div class="scroll-nav">
+      <button class="scroll-nav-btn" id="scrollTopBtn" title="Ke Atas" aria-label="Scroll ke atas">⬆️</button>
+      <button class="scroll-nav-btn" id="scrollBottomBtn" title="Ke Bawah" aria-label="Scroll ke bawah">⬇️</button>
+    </div>
 
     <script src="js/script.js"></script>
   </body>

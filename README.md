@@ -21,14 +21,17 @@ The core idea: same settings should never produce the same prompt twice. Every g
 Plain HTML/CSS/JavaScript — no build step, no dependencies, no backend.
 
 ```
-candid-prompt-studio.html   # markup/UI
-css/styles.css              # styling
+index.html                  # landing/showcase page (marketing site)
+candid-prompt-studio.html   # the tool itself — markup/UI
+css/landing.css             # landing page styling
+css/styles.css              # tool styling
 js/script.js                 # all app logic (state, prompt generation, storage)
+media/                       # result images shown on the landing page (see media/README.md)
 ```
 
 ## Running locally
 
-Just open `candid-prompt-studio.html` in a browser — no server or install required.
+Open `index.html` for the landing page, or `candid-prompt-studio.html` to go straight to the tool — no server or install required.
 
 ```bash
 # optional: serve locally instead of using file://

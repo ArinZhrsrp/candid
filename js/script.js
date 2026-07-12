@@ -31,6 +31,7 @@
         artStyle: "photoreal",
         socialMode: "auto",
         autoCaption: "on",
+        captionLanguage: "auto",
         productCategory: "auto",
         multiImage: "off",
         storyboardFromExisting: "off",
@@ -516,6 +517,7 @@
       // Angle/shot ids that contradict a given POV type (e.g. a Selfie can't logically be shot Top-Down,
       // a Full Body shot can't be Extreme Close-Up). These are hidden from the Angle field when that POV is active.
       const povAngleExclude = {
+        hand: ["ots"],
         selfie: [
           "topdown",
           "lowangle",
@@ -524,17 +526,19 @@
           "crane",
           "tracking",
           "ews",
+          "ots",
         ],
-        headshot: ["macro", "ecu", "topdown", "ews"],
+        headshot: ["macro", "ecu", "topdown", "ews", "ots"],
         fullbody: ["macro", "ecu", "closeup"],
         mirror: ["macro", "ecu", "topdown"],
-        reaction: ["fullwide", "ews", "topdown", "orbit", "crane"],
-        overhead: ["lowangle"],
+        reaction: ["fullwide", "ews", "topdown", "orbit", "crane", "ots"],
+        overhead: ["lowangle", "ots"],
         walkingindoor: ["topdown"],
         walkingoutdoor: ["topdown"],
         car: ["topdown", "fullwide", "ews", "crane"],
-        unboxing: ["fullwide", "ews"],
+        unboxing: ["fullwide", "ews", "ots"],
         gettingready: ["ews"],
+        overshoulder: ["macro", "ecu", "topdown", "ews", "orbit", "ots"],
       };
 
       // ---------- CATEGORY DROPDOWN WIRING ----------
@@ -1216,6 +1220,11 @@
           ? "block"
           : "none";
 
+        // POV is a person/hand concept — irrelevant for a product-only ("None") shot.
+        document
+          .getElementById("povTypeField")
+          .classList.toggle("hidden", noModel);
+
         // person-dependent POV types need a model (a mascot counts as a "model" here too)
         const personPovTypes = [
           "selfie",
@@ -1230,6 +1239,7 @@
           "car",
           "gettingready",
           "unboxing",
+          "overshoulder",
         ];
         const personPovBtnIds = [
           "povSelfie",
@@ -1244,6 +1254,7 @@
           "povCar",
           "povGettingReady",
           "povUnboxing",
+          "povOverShoulder",
         ];
         personPovBtnIds.forEach((id) =>
           document.getElementById(id).toggleAttribute("disabled", noModel),
@@ -1327,6 +1338,9 @@
         document
           .getElementById("socialStudioField")
           .classList.toggle("hidden", state.storyboardStyle !== "socialstudio");
+        document
+          .getElementById("captionLanguageField")
+          .classList.toggle("hidden", state.autoCaption !== "on");
         document
           .getElementById("videoSheetField")
           .classList.toggle("hidden", !isVideoType);
@@ -1657,8 +1671,10 @@
       };
 
       const propPhrases = {
-        flowers: "fresh tulips in a vase",
+        flowers: "fresh white roses or tulips nearby",
         candles: "lit candles",
+        pearls: "a draped pearl necklace or bracelet nearby",
+        vintagemirror: "an ornate vintage mirror in soft focus nearby",
         plush:
           "a cute plush toy (an original, generic teddy-bear-style design — not any copyrighted or licensed character)",
         skincareclutter: "skincare bottles and cosmetics clutter",
@@ -1805,6 +1821,12 @@
         if (s.povType === "unboxing") {
           return `${gender} and a second hand together, ${outfitPhrase}${hijabPhrase}, both hands opening or unboxing "${productName}"${descPart}, excited and curious energy, ${pick(textureDetails)}${skinPhrase}${accessoryPhrase}`;
         }
+        if (s.povType === "overshoulder") {
+          const otsIntro = isVideo
+            ? "angled shot from slightly behind the subject"
+            : "over-the-shoulder view";
+          return `${otsIntro} of ${personRef}, ${outfitPhrase}${hijabPhrase}${agePhrase}${skinPhrase}, shoulder and back of the head softly visible in frame, focus on the hands interacting with "${productName}"${descPart}${accessoryPhrase}`;
+        }
         // default: hand-focused shot
         if (s.hold === "handheld") {
           return `${gender}, ${outfitPhrase}${hijabPhrase}, ${pick(handDetails)} while holding "${productName}"${descPart}, ${pick(textureDetails)}${skinPhrase}${accessoryPhrase}`;
@@ -1895,6 +1917,12 @@
         }
         if (s.povType === "unboxing") {
           return `both hands opening or unboxing "${productName}"${descPart} together, excited and curious energy`;
+        }
+        if (s.povType === "overshoulder") {
+          const otsIntro = isVideo
+            ? "angled shot from slightly behind the subject"
+            : "over-the-shoulder view";
+          return `${otsIntro}, shoulder and back of the head softly visible in frame, focus on the hands interacting with "${productName}"${descPart}`;
         }
         if (s.hold === "handheld") {
           return `${pick(handDetails)} while holding "${productName}"${descPart}, ${pick(textureDetails)}`;
@@ -1995,16 +2023,17 @@
 
           const locationPhrase = customBg || backgroundPhrases[s.location];
           let ambiencePhrase = ambiencePhrases[s.ambience];
-          let propsPart = "";
-
           if (s.kawaii === "on") {
             ambiencePhrase = kawaiiAmbiencePhrase;
-            const selectedProps = getMultiValues("props").map(
-              (p) => propPhrases[p],
-            );
-            if (selectedProps.length) {
-              propsPart = `, with ${selectedProps.join(", ")} softly blurred in the background`;
-            }
+          }
+
+          // Props work independently of kawaii mode — usable with any aesthetic.
+          let propsPart = "";
+          const selectedProps = getMultiValues("props").map(
+            (p) => propPhrases[p],
+          );
+          if (selectedProps.length) {
+            propsPart = `, with ${selectedProps.join(", ")} softly blurred in the background`;
           }
           backgroundSection = `${locationPhrase}${propsPart}, ${ambiencePhrase}`;
         }
@@ -2167,6 +2196,18 @@
         macroaction: "Macro Action",
       };
 
+      const captionLanguagePhrases = {
+        auto: "Malay or English, whichever suits the product",
+        ms: "Bahasa Melayu",
+        en: "English",
+      };
+      function getCaptionLanguageText(s) {
+        return (
+          captionLanguagePhrases[s.captionLanguage] ||
+          captionLanguagePhrases.auto
+        );
+      }
+
       // Generic Malay marketing tagline pool for burned-in storyboard captions (title + subtext).
       const malayTaglines = [
         { t: "GAYA KLASIK, SELESA HARI-HARI.", s: "Sesuai untuk semua acara." },
@@ -2204,6 +2245,7 @@
         car: ["Duduk dalam kereta", "Pegang dalam kereta"],
         gettingready: ["Routine pagi", "Bersedia depan cermin"],
         unboxing: ["Buka kotak", "Unbox produk"],
+        overshoulder: ["Guna produk dari belakang bahu", "Tunjuk aksi dari belakang"],
       };
       function deriveActionLabel(s) {
         if (s.model === "none")
@@ -2332,7 +2374,7 @@
         const captionRule =
           s.autoCaption === "off"
             ? "Do not add any headline captions."
-            : "For every headline caption, YOU (the AI) must write a short, relevant line that genuinely matches this exact product, its category, and the scene shown — never generic placeholder text. Captions may be in Malay or English to suit the product.";
+            : `For every headline caption, YOU (the AI) must write a short, relevant line that genuinely matches this exact product, its category, and the scene shown — never generic placeholder text. Write captions in ${getCaptionLanguageText(s)}.`;
 
         // ---- Based on an already-generated image: skip all visual-settings generation ----
         if (s.storyboardFromExisting === "on") {
@@ -2526,7 +2568,7 @@
               s.panelNumber === "on"
                 ? `Numbered badge "${String(i + 1).padStart(2, "0")}" in a colored rounded-square top-left corner. `
                 : "";
-            return `Panel ${i + 1} (${ugcRoleLabels[role]}): ${numberBadge}Camera direction: ${shotTypePhrases[forcedAngle]}. A short punchy caption (AI to auto-write, genuinely fitting this product & the ${ugcRoleLabels[role]} beat — Malay or English, not generic filler) burned into the image. Small metadata labels burned into the lower-left corner reading "ACTION: ${ugcRoleLabels[role]}", "CAMERA: ${cameraLabel}", "LIGHTING: ${lighting}", "AUDIO: ${audio}", "DURATION: ${durations[i]}s".`;
+            return `Panel ${i + 1} (${ugcRoleLabels[role]}): ${numberBadge}Camera direction: ${shotTypePhrases[forcedAngle]}. A short punchy caption (AI to auto-write, genuinely fitting this product & the ${ugcRoleLabels[role]} beat — ${getCaptionLanguageText(s)}, not generic filler) burned into the image. Small metadata labels burned into the lower-left corner reading "ACTION: ${ugcRoleLabels[role]}", "CAMERA: ${cameraLabel}", "LIGHTING: ${lighting}", "AUDIO: ${audio}", "DURATION: ${durations[i]}s".`;
           });
           return `Using the uploaded product image as the exact visual reference — do NOT regenerate the pose, outfit, model, or background; keep the subject and setting exactly as shown in the uploaded image in every panel. Create a single UGC storyboard sheet image containing EXACTLY ${count} panels arranged in a clean ${cols}x${rows} grid (leave any extra grid cells empty — do not add extra panels), styled like a professional shot-list-annotated ad storyboard. Total video duration ${totalDuration}s across ${count} scenes.\n\n${panelLinesExisting.join("\n")}\n\nFor every caption, YOU (the AI) must write a short line that genuinely matches this exact product and the scene's role — never generic placeholder text. Only the camera angle/framing and burned-in text/metadata should differ between panels — the subject, outfit, pose, and background must remain identical to the uploaded image throughout. Art style: ${artStyleText}, consistent across every panel. Overall grid image aspect ratio ${s.aspect}.`;
         }
@@ -2548,7 +2590,7 @@
             s.panelNumber === "on"
               ? `Numbered badge "${String(i + 1).padStart(2, "0")}" in a colored rounded-square top-left corner. `
               : "";
-          return `Panel ${i + 1} (${ugcRoleLabels[role]}): ${numberBadge}${core.angleText}, ${core.framingPhrase}, showing ${action}. A short punchy caption (AI to auto-write, genuinely fitting this product & the ${ugcRoleLabels[role]} beat — Malay or English, not generic filler) burned into the image. Small metadata labels burned into the lower-left corner reading "ACTION: ${ugcRoleLabels[role]}", "CAMERA: ${cameraLabel}", "LIGHTING: ${lighting}", "AUDIO: ${audio}", "DURATION: ${durations[i]}s".`;
+          return `Panel ${i + 1} (${ugcRoleLabels[role]}): ${numberBadge}${core.angleText}, ${core.framingPhrase}, showing ${action}. A short punchy caption (AI to auto-write, genuinely fitting this product & the ${ugcRoleLabels[role]} beat — ${getCaptionLanguageText(s)}, not generic filler) burned into the image. Small metadata labels burned into the lower-left corner reading "ACTION: ${ugcRoleLabels[role]}", "CAMERA: ${cameraLabel}", "LIGHTING: ${lighting}", "AUDIO: ${audio}", "DURATION: ${durations[i]}s".`;
         });
 
         return `Create a single UGC storyboard sheet image containing EXACTLY ${count} panels arranged in a clean ${cols}x${rows} grid (leave any extra grid cells empty — do not add extra panels), all featuring "${productName}"${descPart} — the exact same product as the uploaded reference image, 100% consistent across every panel — styled like a professional shot-list-annotated ad storyboard. Total video duration ${totalDuration}s across ${count} scenes.\n\n${panelLines.join("\n")}\n\nFor every caption, YOU (the AI) must write a short line that genuinely matches this exact product and the scene's role — never generic placeholder text. All caption text and metadata labels are burned directly into the image itself (not a separate overlay layer), styled in a bold, clearly readable font with good contrast. All panels share the same ${sharedCore.backgroundSection}, ${sharedCore.lightingPhrase}, and ${sharedCore.visualStylePhrase} for a cohesive sheet. ${sharedCore.productReferenceLine} Art style: ${artStyleText}, consistent across every panel. Overall grid image aspect ratio ${s.aspect}.`;
@@ -2902,7 +2944,7 @@ ART STYLE & QUALITY: ${artStyleText}. The storyboard must resemble a creative ag
               const captionPart =
                 s.autoCaption === "off"
                   ? ""
-                  : `HEADLINE: (AI to auto-write a short caption that genuinely fits this product & scene — not generic filler)\n`;
+                  : `HEADLINE: (AI to auto-write a short caption in ${getCaptionLanguageText(s)} that genuinely fits this product & scene — not generic filler)\n`;
               const breakdown = `${captionPart}ACTION: ${actionLabel}\nCAMERA: ${cameraLabel}\nLIGHTING: ${lighting}\nAUDIO: ${audio}\nDURATION: ${segDur}s (${startTc}s – ${endTc}s)`;
               return {
                 label: `${String(i + 1).padStart(2, "0")} — ${title}`,
@@ -2940,7 +2982,7 @@ ART STYLE & QUALITY: ${artStyleText}. The storyboard must resemble a creative ag
             const captionPart =
               s.autoCaption === "off"
                 ? ""
-                : `HEADLINE: (AI to auto-write a short caption that genuinely fits this product & scene — not generic filler)\n`;
+                : `HEADLINE: (AI to auto-write a short caption in ${getCaptionLanguageText(s)} that genuinely fits this product & scene — not generic filler)\n`;
             const breakdown = `${captionPart}ACTION: ${actionLabel}\nCAMERA: ${cameraLabel}\nLIGHTING: ${lighting}\nAUDIO: ${audio}\nDURATION: ${segDur}s (${startTc}s – ${endTc}s)`;
             const text = `${breakdown}\n\n${prompt}`;
             return {
@@ -2986,7 +3028,10 @@ Each new generation should ONLY vary the product placement, camera angle, framin
       }
 
       // ---------- GENERATE / REGENERATE ----------
-      function generateFrames() {
+      const SAFETY_REMINDER =
+        "Safety check: do not depict, mention, or imitate any real, famous, or trademarked brand names, logos, or copyrighted characters. Ensure all rendered/burned-in text is clean, correctly spelled, and legible — avoid garbled, duplicated, or nonsensical text. Do not include misleading links, fake QR codes, clickbait phrases, or any link-manipulation / \"link bait\" elements.";
+
+      function buildFrames() {
         if (state.outputType === "image" && state.multiImage === "on") {
           return [
             {
@@ -3012,8 +3057,15 @@ Each new generation should ONLY vary the product placement, camera angle, framin
         }
 
         const frames = [];
-        frames.push({ label: `FRAME 001`, text: buildOnePrompt(state) });
+        frames.push({ label: `GAMBAR`, text: buildOnePrompt(state) });
         return frames;
+      }
+
+      function generateFrames() {
+        return buildFrames().map((frame) => ({
+          ...frame,
+          text: `${frame.text}\n\n${SAFETY_REMINDER}`,
+        }));
       }
 
       function copyToClipboard(text, btn) {
@@ -3074,6 +3126,11 @@ Each new generation should ONLY vary the product placement, camera angle, framin
         });
         document.getElementById("filmstrip").classList.add("show");
         document.getElementById("floatCollapseBtn").classList.remove("hidden");
+        // Land the user at the TOP of the freshly generated prompt, not mid-scroll —
+        // "Skip Ke Bawah" right there lets them jump straight to Copy without reading through.
+        document
+          .getElementById("filmstrip")
+          .scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
       document.getElementById("generateBtn").addEventListener("click", () => {
@@ -3081,9 +3138,6 @@ Each new generation should ONLY vary the product placement, camera angle, framin
         lastFrames = generateFrames();
         renderFrames(lastFrames);
         saveToHistory(lastFrames);
-        document
-          .getElementById("filmstrip")
-          .scrollIntoView({ behavior: "smooth", block: "center" });
       });
 
       document.getElementById("regenBtn").addEventListener("click", () => {
@@ -3262,6 +3316,23 @@ Each new generation should ONLY vary the product placement, camera angle, framin
           document.getElementById("filmstrip").classList.remove("show");
           document.getElementById("floatCollapseBtn").classList.add("hidden");
         });
+
+      document.getElementById("scrollTopBtn").addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      document
+        .getElementById("scrollBottomBtn")
+        .addEventListener("click", () => {
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: "smooth",
+          });
+        });
+      document.getElementById("skipToCopyBtn").addEventListener("click", () => {
+        document
+          .querySelector(".output-actions")
+          .scrollIntoView({ behavior: "smooth", block: "start" });
+      });
 
       document
         .getElementById("clearHistory")

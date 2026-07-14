@@ -593,11 +593,9 @@
 
       document.getElementById("productName").addEventListener("input", () => {
         if (state.productCategory === "auto") updateCategoryNote();
-        currentProductScenes = [];
       });
       document.getElementById("productType").addEventListener("input", () => {
         if (state.productCategory === "auto") updateCategoryNote();
-        currentProductScenes = [];
       });
 
       // ---------- PILL / COLOR GROUP HANDLING ----------
@@ -1020,56 +1018,75 @@
         ],
       };
 
-      function generateTenUniqueScenes(productName, category) {
-        const name = productName ? productName.trim() : "the product";
+      // Local structural generator — generates ONE scene per call so every click can react
+      // to whatever the user changed since the last click (product, location, ambience...).
+      // A persistent pool (keyed by category+location) is drawn from without replacement so
+      // consecutive clicks on the same product/setting still don't repeat combinations;
+      // changing category or location starts a fresh pool automatically.
+      let structuralPool = null;
+      let structuralPoolKey = "";
+
+      function pullRandom(array, refill) {
+        if (array.length === 0) array.push(...refill);
+        const index = Math.floor(Math.random() * array.length);
+        return array.splice(index, 1)[0];
+      }
+
+      function getStructuralPool(category, locationOverride) {
         const selectedCategory = creativePool.categoryActions[category]
           ? category
           : "Umum";
-        const pool = {
-          angles: [...creativePool.angles],
-          actions: [...creativePool.categoryActions[selectedCategory]],
-          environments: [...creativePool.environments],
-          lighting: [...creativePool.lighting],
-          aesthetics: [...creativePool.aesthetics],
-          atmospheres: [...creativePool.atmospheres],
-        };
-        function pullRandom(array, refill) {
-          if (array.length === 0) array.push(...refill);
-          const index = Math.floor(Math.random() * array.length);
-          return array.splice(index, 1)[0];
+        const key = selectedCategory + "|" + (locationOverride || "");
+        if (!structuralPool || structuralPoolKey !== key) {
+          structuralPoolKey = key;
+          const environmentsRefill = locationOverride
+            ? [locationOverride]
+            : creativePool.environments;
+          structuralPool = {
+            selectedCategory,
+            environmentsRefill,
+            angles: [...creativePool.angles],
+            actions: [...creativePool.categoryActions[selectedCategory]],
+            environments: [...environmentsRefill],
+            lighting: [...creativePool.lighting],
+            aesthetics: [...creativePool.aesthetics],
+            atmospheres: [...creativePool.atmospheres],
+            i: 0,
+          };
         }
-        const scenes = [];
-        for (let i = 1; i <= 10; i++) {
-          const angle = pullRandom(pool.angles, creativePool.angles);
-          const action = pullRandom(
-            pool.actions,
-            creativePool.categoryActions[selectedCategory],
-          ).replace("{product}", name);
-          const env = pullRandom(pool.environments, creativePool.environments);
-          const light = pullRandom(pool.lighting, creativePool.lighting);
-          const aes = pullRandom(pool.aesthetics, creativePool.aesthetics);
-          const atm = pullRandom(pool.atmospheres, creativePool.atmospheres);
-          let sentence = "";
-          switch (i % 4) {
-            case 0:
-              sentence = `${angle} ${action}. Captured ${env} under ${light}, ${atm}`;
-              break;
-            case 1:
-              sentence = `Set ${env}, ${light} beautifully highlights ${action}. ${angle} the scene, ${aes}, ${atm}`;
-              break;
-            case 2:
-              sentence = `${action}, stylized ${env}. This shot, ${aes}, is lit with ${light}, ${atm}`;
-              break;
-            case 3:
-              sentence = `${angle} ${action} ${env}. Bathed in ${light}, ${aes}, ${atm}`;
-              break;
-          }
-          scenes.push(sentence.charAt(0).toUpperCase() + sentence.slice(1));
-        }
-        return scenes;
+        return structuralPool;
       }
 
-      let currentProductScenes = [];
+      function generateOneLocalScene(productName, category, locationOverride) {
+        const name = productName ? productName.trim() : "the product";
+        const pool = getStructuralPool(category, locationOverride);
+        const angle = pullRandom(pool.angles, creativePool.angles);
+        const action = pullRandom(
+          pool.actions,
+          creativePool.categoryActions[pool.selectedCategory],
+        ).replace("{product}", name);
+        const env = pullRandom(pool.environments, pool.environmentsRefill);
+        const light = pullRandom(pool.lighting, creativePool.lighting);
+        const aes = pullRandom(pool.aesthetics, creativePool.aesthetics);
+        const atm = pullRandom(pool.atmospheres, creativePool.atmospheres);
+        pool.i++;
+        let sentence = "";
+        switch (pool.i % 4) {
+          case 0:
+            sentence = `${angle} ${action}. Captured ${env} under ${light}, ${atm}`;
+            break;
+          case 1:
+            sentence = `Set ${env}, ${light} beautifully highlights ${action}. ${angle} the scene, ${aes}, ${atm}`;
+            break;
+          case 2:
+            sentence = `${action}, stylized ${env}. This shot, ${aes}, is lit with ${light}, ${atm}`;
+            break;
+          case 3:
+            sentence = `${angle} ${action} ${env}. Bathed in ${light}, ${aes}, ${atm}`;
+            break;
+        }
+        return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+      }
 
       function generateUniqueSceneSuggestion(hints) {
         const candidates = [];
@@ -1098,7 +1115,201 @@
 
       const MAX_SUGGESTED_SCENES = 10;
 
-      document.getElementById("autoSceneBtn").addEventListener("click", () => {
+      // ---------- AI SCENE SUGGESTIONS (Gemini -> Groq -> WebLLM -> Local template) ----------
+      let webllmEnginePromise = null;
+
+      // Bounds any promise to at most `ms` — without this, the WebLLM tier (model
+      // download + in-browser inference) has no cap and can leave the UI looking stuck
+      // for minutes on a slow connection/weak GPU with zero feedback beyond the toast.
+      function withTimeout(promise, ms) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error("timeout")), ms);
+          promise.then(
+            (v) => {
+              clearTimeout(timer);
+              resolve(v);
+            },
+            (e) => {
+              clearTimeout(timer);
+              reject(e);
+            },
+          );
+        });
+      }
+
+      // Describes the visual settings (location/ambience) the user has already chosen,
+      // so scene suggestions land in the same setting instead of contradicting it
+      // (e.g. suggesting a beach scene when the user already picked "Bathroom Counter").
+      // backgroundPhrases/ambiencePhrases are the same maps the final prompt assembly uses.
+      function getSceneLocationContext() {
+        const customBg = document.getElementById("customBg").value.trim();
+        const locationPhrase = customBg || backgroundPhrases[state.location] || "";
+        const ambiencePhrase = ambiencePhrases[state.ambience] || "";
+        return [locationPhrase, ambiencePhrase].filter(Boolean).join(", ");
+      }
+
+      (function restoreAIModePref() {
+        try {
+          const saved = localStorage.getItem("candid-pref-aiMode");
+          const toggle = document.getElementById("aiModeToggle");
+          if (saved !== null && toggle) toggle.checked = saved === "on";
+        } catch (e) {}
+      })();
+
+      document.getElementById("aiModeToggle").addEventListener("change", (e) => {
+        try {
+          localStorage.setItem("candid-pref-aiMode", e.target.checked ? "on" : "off");
+        } catch (err) {}
+      });
+
+      function isAIModeEnabled() {
+        return document.getElementById("aiModeToggle").checked;
+      }
+
+      // Bottom-corner status toast — deliberately generic ("server N") so no
+      // AI vendor name is ever shown in the UI.
+      function showToast(text) {
+        const toast = document.getElementById("aiToast");
+        document.getElementById("aiToastText").textContent = text;
+        toast.classList.remove("hidden");
+      }
+      function hideToast() {
+        document.getElementById("aiToast").classList.add("hidden");
+      }
+
+      // provider: "gemini" | "groq" — passed straight through to api/ai-suggest.js
+      async function fetchAIScenes(productType, productName, productDesc, category, count, locationContext, provider) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        try {
+          const res = await fetch("/api/ai-suggest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productType,
+              productName,
+              productDesc,
+              category,
+              count,
+              locationContext,
+              provider,
+            }),
+            signal: controller.signal,
+          });
+          if (!res.ok) return null;
+          const data = await res.json();
+          return Array.isArray(data.scenes) && data.scenes.length
+            ? data.scenes
+            : null;
+        } catch (e) {
+          return null;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      async function tryWebLLMScenes(productLabel, category, count, locationContext) {
+        if (!("gpu" in navigator)) return null;
+        let engine;
+        try {
+          if (!webllmEnginePromise) {
+            webllmEnginePromise = import(
+              "https://esm.run/@mlc-ai/web-llm"
+            ).then((webllm) =>
+              webllm.CreateMLCEngine("Llama-3.2-1B-Instruct-q4f16_1-MLC"),
+            );
+          }
+          // First-time model download can be large — bounded generously, but bounded.
+          engine = await withTimeout(webllmEnginePromise, 25000);
+        } catch (e) {
+          webllmEnginePromise = null; // load failed/timed out — start fresh next attempt
+          return null;
+        }
+        try {
+          const settingLine = locationContext
+            ? ` All scenes must take place in this exact setting: ${locationContext}. Do not suggest a different location.`
+            : "";
+          const prompt =
+            `Write ${count} distinct, vivid, single-sentence camera/action scene descriptions for a photo or ` +
+            `video featuring this product: "${productLabel}" (category: ${category}).${settingLine} ` +
+            `One per line, no numbering, English only.`;
+          const reply = await withTimeout(
+            engine.chat.completions.create({
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.9,
+            }),
+            20000,
+          );
+          const text = reply?.choices?.[0]?.message?.content || "";
+          const scenes = text
+            .split("\n")
+            .map((l) => l.replace(/^[\s\-*\d.)]+/, "").trim())
+            .filter(Boolean)
+            .slice(0, count);
+          return scenes.length ? scenes : null;
+        } catch (e) {
+          // Inference failed/timed out — the engine itself is still usable, so don't
+          // force a re-download on the next attempt.
+          return null;
+        }
+      }
+
+      // Generates exactly ONE scene, reading whatever product/location context is passed in
+      // at call time — called fresh on every click so edits to the product or visual settings
+      // between clicks are reflected immediately, instead of reusing a stale first-click batch.
+      async function getOneProductScene(
+        productType,
+        productName,
+        productDesc,
+        category,
+      ) {
+        const productLabel = productName || productType;
+        const locationContext = getSceneLocationContext();
+        if (isAIModeEnabled()) {
+          try {
+            // "Server 1" = Gemini
+            showToast("Running server 1...");
+            const geminiScenes = await fetchAIScenes(
+              productType,
+              productName,
+              productDesc,
+              category,
+              1,
+              locationContext,
+              "gemini",
+            );
+            if (geminiScenes && geminiScenes[0]) return geminiScenes[0];
+
+            // "Server 2" = Groq
+            showToast("Running server 2...");
+            const groqScenes = await fetchAIScenes(
+              productType,
+              productName,
+              productDesc,
+              category,
+              1,
+              locationContext,
+              "groq",
+            );
+            if (groqScenes && groqScenes[0]) return groqScenes[0];
+
+            // "Server 3" = in-browser WebLLM
+            showToast("Running server 3...");
+            const webllmScenes = await tryWebLLMScenes(
+              productLabel,
+              category,
+              1,
+              locationContext,
+            );
+            if (webllmScenes && webllmScenes[0]) return webllmScenes[0];
+          } finally {
+            hideToast();
+          }
+        }
+        return generateOneLocalScene(productLabel, category, locationContext);
+      }
+
+      document.getElementById("autoSceneBtn").addEventListener("click", async () => {
         const productType = document.getElementById("productType").value.trim();
         const note = document.getElementById("autoSceneNote");
         if (!productType) {
@@ -1111,7 +1322,9 @@
         }
         note.style.color = "";
 
-        // detect category & apply matching visual settings (location/ambience/etc.)
+        // detect category (for the note text only — visual settings like location/ambience
+        // are chosen by the user already at this point, so scene suggestions must respect
+        // them instead of overriding them)
         const text = (
           productType +
           " " +
@@ -1123,8 +1336,6 @@
           categoryRules.find((rule) =>
             rule.keywords.some((k) => text.includes(k)),
           ) || defaultCategorySettings;
-        Object.entries(match.settings).forEach(([k, v]) => setPillValue(k, v));
-        updateVisibility();
 
         note.style.display = "block";
 
@@ -1141,24 +1352,34 @@
           userCard.classList.remove("active");
         }
 
-        // generate the 10 unique creative scenes once (using the detected 20-type category + product name)
-        if (suggestedSceneCount === 0 || currentProductScenes.length === 0) {
-          const catForScenes = getActiveCategory();
-          const productLabel =
-            document.getElementById("productName").value.trim() || productType;
-          currentProductScenes = generateTenUniqueScenes(
-            productLabel,
-            catForScenes,
-          );
-        }
-
         if (suggestedSceneCount >= MAX_SUGGESTED_SCENES) {
           note.textContent = `✓ Kategori: "${match.name}". Maksimum ${MAX_SUGGESTED_SCENES} cadangan scene dah tercapai.`;
           document.getElementById("sceneChoices").classList.remove("hidden");
           return;
         }
 
-        const sceneText = currentProductScenes[suggestedSceneCount];
+        // Generate ONE scene fresh, right now — reads current product/location inputs so
+        // any change since the last click (product, location, ambience...) is picked up.
+        const catForScenes = getActiveCategory();
+        const productLabel =
+          document.getElementById("productName").value.trim() || productType;
+        const btn = document.getElementById("autoSceneBtn");
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "⏳ Menjana...";
+        let sceneText;
+        try {
+          sceneText = await getOneProductScene(
+            productType,
+            productLabel,
+            document.getElementById("productDesc").value.trim(),
+            catForScenes,
+          );
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
+
         suggestedSceneCount++;
         const list = document.getElementById("suggestedScenesList");
         const activeClass = suggestedSceneCount === 1 ? " active" : "";
@@ -3031,6 +3252,109 @@ Each new generation should ONLY vary the product placement, camera angle, framin
       const SAFETY_REMINDER =
         "Safety check: do not depict, mention, or imitate any real, famous, or trademarked brand names, logos, or copyrighted characters. Ensure all rendered/burned-in text is clean, correctly spelled, and legible — avoid garbled, duplicated, or nonsensical text. Do not include misleading links, fake QR codes, clickbait phrases, or any link-manipulation / \"link bait\" elements.";
 
+      // ---------- AI PROMPT ENHANCE (Gemini -> Groq -> WebLLM -> deterministic text as-is) ----------
+      // Only ever applied to narrative single-frame output (see isEnhanceEligible) — structured
+      // [LABEL] prompts, storyboards, UGC sheets, and multi-image composites keep their exact
+      // deterministic text always, since those carry machine-parsed contracts an LLM rewrite
+      // pass could silently break (see buildStoryboard/generateUgcFrames/buildMultiImagePrompt).
+      function isEnhanceEligible(s) {
+        if (s.multiImage === "on") return false;
+        if (s.outputType === "image" && s.storyboardMode === "on") return false;
+        if (s.outputType === "image" && s.promptFormat === "structured") return false;
+        return true;
+      }
+
+      async function fetchAIEnhance(promptText, provider) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        try {
+          const res = await fetch("/api/ai-enhance-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ promptText, provider }),
+            signal: controller.signal,
+          });
+          if (!res.ok) return null;
+          const data = await res.json();
+          return typeof data.text === "string" && data.text.trim() ? data.text.trim() : null;
+        } catch (e) {
+          return null;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      async function tryWebLLMEnhance(promptText) {
+        if (!("gpu" in navigator)) return null;
+        let engine;
+        try {
+          if (!webllmEnginePromise) {
+            webllmEnginePromise = import(
+              "https://esm.run/@mlc-ai/web-llm"
+            ).then((webllm) =>
+              webllm.CreateMLCEngine("Llama-3.2-1B-Instruct-q4f16_1-MLC"),
+            );
+          }
+          // First-time model download can be large — bounded generously, but bounded.
+          engine = await withTimeout(webllmEnginePromise, 25000);
+        } catch (e) {
+          webllmEnginePromise = null; // load failed/timed out — start fresh next attempt
+          return null;
+        }
+        try {
+          const prompt =
+            `Rewrite the following AI image/video generation prompt into more vivid, natural, less templated ` +
+            `language, while preserving every stated fact (angle, framing, action, style, background, lighting, ` +
+            `mood, camera gear) and any explicit instruction about keeping a background/product/reference image ` +
+            `unchanged, locked, or identical. Return ONLY the rewritten prompt text, no commentary.\n\n` +
+            `Original prompt:\n${promptText}`;
+          const reply = await withTimeout(
+            engine.chat.completions.create({
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.9,
+            }),
+            20000,
+          );
+          const text = (reply?.choices?.[0]?.message?.content || "").trim();
+          return text || null;
+        } catch (e) {
+          // Inference failed/timed out — the engine itself is still usable, so don't
+          // force a re-download on the next attempt.
+          return null;
+        }
+      }
+
+      // Strips the deterministic "Aspect ratio X." trailer before sending for rewriting, and
+      // re-appends it ourselves afterward — so the exact aspect ratio can never go missing or
+      // get reworded by the AI, regardless of which tier answers.
+      async function enhancePromptText(promptText) {
+        const aspectMatch = promptText.match(/\n?Aspect ratio [^\n]+\.\s*$/i);
+        const aspectLine = aspectMatch ? aspectMatch[0].trim() : "";
+        const bodyText = aspectMatch
+          ? promptText.slice(0, aspectMatch.index).trim()
+          : promptText;
+
+        try {
+          // "Server 1" = Gemini
+          showToast("Running server 1...");
+          const geminiText = await fetchAIEnhance(bodyText, "gemini");
+          if (geminiText) return aspectLine ? `${geminiText}\n\n${aspectLine}` : geminiText;
+
+          // "Server 2" = Groq
+          showToast("Running server 2...");
+          const groqText = await fetchAIEnhance(bodyText, "groq");
+          if (groqText) return aspectLine ? `${groqText}\n\n${aspectLine}` : groqText;
+
+          // "Server 3" = in-browser WebLLM
+          showToast("Running server 3...");
+          const webllmText = await tryWebLLMEnhance(bodyText);
+          if (webllmText) return aspectLine ? `${webllmText}\n\n${aspectLine}` : webllmText;
+        } finally {
+          hideToast();
+        }
+        return null;
+      }
+
       function buildFrames() {
         if (state.outputType === "image" && state.multiImage === "on") {
           return [
@@ -3061,8 +3385,13 @@ Each new generation should ONLY vary the product placement, camera angle, framin
         return frames;
       }
 
-      function generateFrames() {
-        return buildFrames().map((frame) => ({
+      async function generateFramesAsync() {
+        const frames = buildFrames();
+        if (isAIModeEnabled() && frames.length === 1 && isEnhanceEligible(state)) {
+          const enhanced = await enhancePromptText(frames[0].text);
+          if (enhanced) frames[0].text = enhanced;
+        }
+        return frames.map((frame) => ({
           ...frame,
           text: `${frame.text}\n\n${SAFETY_REMINDER}`,
         }));
@@ -3133,18 +3462,36 @@ Each new generation should ONLY vary the product placement, camera angle, framin
           .scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
-      document.getElementById("generateBtn").addEventListener("click", () => {
-        lastState = { ...state };
-        lastFrames = generateFrames();
-        renderFrames(lastFrames);
-        saveToHistory(lastFrames);
+      document.getElementById("generateBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("generateBtn");
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "⏳ Menjana Prompt...";
+        try {
+          lastState = { ...state };
+          lastFrames = await generateFramesAsync();
+          renderFrames(lastFrames);
+          saveToHistory(lastFrames);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       });
 
-      document.getElementById("regenBtn").addEventListener("click", () => {
+      document.getElementById("regenBtn").addEventListener("click", async () => {
         if (!lastState) return;
-        lastFrames = generateFrames();
-        renderFrames(lastFrames);
-        saveToHistory(lastFrames);
+        const btn = document.getElementById("regenBtn");
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "⏳ Menjana Prompt...";
+        try {
+          lastFrames = await generateFramesAsync();
+          renderFrames(lastFrames);
+          saveToHistory(lastFrames);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
       });
 
       document.getElementById("copyAllBtn").addEventListener("click", () => {
@@ -3394,7 +3741,8 @@ Each new generation should ONLY vary the product placement, camera angle, framin
         document.getElementById("suggestedScenesList").innerHTML = "";
         suggestedSceneCount = 0;
         usedSceneTexts.clear();
-        currentProductScenes = [];
+        structuralPool = null;
+        structuralPoolKey = "";
         document.getElementById("sceneLimitNote").style.display = "none";
         document
           .querySelectorAll(".scene-card")

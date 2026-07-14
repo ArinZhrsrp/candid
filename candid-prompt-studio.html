@@ -121,44 +121,6 @@
             Kategori membantu prompt cadangkan background, scene &amp; mood yang
             lebih sesuai. Biar "Auto-Detect" atau pilih manual.
           </div>
-
-          <label class="field-label">Scene (Idea Anda, optional)</label>
-          <textarea
-            id="userScene"
-            rows="2"
-            placeholder="cth: duduk depan cermin bilik, tangan pegang produk dekat muka, senyum sikit"
-          ></textarea>
-
-          <button
-            class="advanced-toggle"
-            id="autoSceneBtn"
-            style="margin-top: 16px"
-          >
-            🪄 Auto Cadangkan Scene Berdasarkan Produk
-          </button>
-          <div class="note">
-            Setiap klik tambah 1 cadangan baru (maksimum 10 cadangan).
-          </div>
-          <div class="note" id="autoSceneNote" style="display: none"></div>
-
-          <div id="sceneChoices" class="hidden" style="margin-top: 14px">
-            <label class="field-label"
-              >Pilih Scene (maksimum 5, termasuk Scene Anda)</label
-            >
-            <div id="sceneCardUser" class="scene-card hidden" data-value="user">
-              <div class="scene-card-title">📝 Scene Anda</div>
-              <div class="scene-card-text" id="sceneCardUserText"></div>
-            </div>
-            <div id="suggestedScenesList"></div>
-            <div
-              class="note"
-              id="sceneLimitNote"
-              style="display: none; color: var(--danger)"
-            >
-              ⚠️ Maksimum 5 scene sahaja boleh dipilih sekali gus — nyahpilih
-              satu dulu.
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1159,6 +1121,66 @@
         </div>
       </div>
 
+      <!-- SECTION 5: SCENE SUGGESTIONS (comes after Visual Settings so location/ambience/style are already chosen) -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-num">05</span
+          ><span class="section-title">Cadangan Scene</span>
+        </div>
+        <div class="panel">
+          <label class="field-label">Scene (Idea Anda, optional)</label>
+          <textarea
+            id="userScene"
+            rows="2"
+            placeholder="cth: duduk depan cermin bilik, tangan pegang produk dekat muka, senyum sikit"
+          ></textarea>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-top: 16px;
+              font-size: 11.5px;
+              color: var(--muted);
+            "
+          >
+            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer">
+              <input type="checkbox" id="aiModeToggle" checked style="cursor: pointer" />
+              🤖 AI Mode (cadangan scene lebih kreatif, perlukan internet)
+            </label>
+          </div>
+
+          <button class="advanced-toggle" id="autoSceneBtn" style="margin-top: 8px">
+            🪄 Auto Cadangkan Scene Berdasarkan Produk
+          </button>
+          <div class="note">
+            Cadangan scene akan ikut lokasi/ambience/gaya yang kau dah pilih
+            di atas — setiap klik tambah 1 cadangan baru (maksimum 10 cadangan).
+          </div>
+          <div class="note" id="autoSceneNote" style="display: none"></div>
+
+          <div id="sceneChoices" class="hidden" style="margin-top: 14px">
+            <label class="field-label"
+              >Pilih Scene (maksimum 5, termasuk Scene Anda)</label
+            >
+            <div id="sceneCardUser" class="scene-card hidden" data-value="user">
+              <div class="scene-card-title">📝 Scene Anda</div>
+              <div class="scene-card-text" id="sceneCardUserText"></div>
+            </div>
+            <div id="suggestedScenesList"></div>
+            <div
+              class="note"
+              id="sceneLimitNote"
+              style="display: none; color: var(--danger)"
+            >
+              ⚠️ Maksimum 5 scene sahaja boleh dipilih sekali gus — nyahpilih
+              satu dulu.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style="display: flex; gap: 10px">
         <button class="generate-btn" id="generateBtn" style="flex: 1">
           ✨ JANA PROMPT
@@ -1204,7 +1226,7 @@
       <div class="section" style="margin-top: 34px">
         <div class="section-head between">
           <div>
-            <span class="section-num">05</span>
+            <span class="section-num">06</span>
             <span class="section-title">Riwayat</span>
           </div>
           <button class="clear-all" id="clearHistory">Padam Semua</button>
@@ -1220,7 +1242,7 @@
     </div>
 
     <footer class="tool-footer">
-      <span class="version-tag">© 2026&emsp;Version v1.0.1</span>
+      <span class="version-tag">© 2026&emsp;Version v1.1.0</span>
     </footer>
 
     <button class="float-collapse-btn hidden" id="floatCollapseBtn">
@@ -1230,6 +1252,11 @@
     <div class="scroll-nav">
       <button class="scroll-nav-btn" id="scrollTopBtn" title="Ke Atas" aria-label="Scroll ke atas">⬆️</button>
       <button class="scroll-nav-btn" id="scrollBottomBtn" title="Ke Bawah" aria-label="Scroll ke bawah">⬇️</button>
+    </div>
+
+    <div class="ai-toast hidden" id="aiToast" role="status" aria-live="polite">
+      <span class="ai-toast-spinner"></span>
+      <span id="aiToastText">Running server 1...</span>
     </div>
 
     <script src="js/script.js"></script>

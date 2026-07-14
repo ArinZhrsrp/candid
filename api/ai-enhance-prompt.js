@@ -35,7 +35,10 @@ function cleanText(text) {
 
 async function tryGemini(prompt) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+  if (!key) {
+    console.error("[ai-enhance-prompt] Gemini skipped: GEMINI_API_KEY not set");
+    return null;
+  }
   const res = await fetch(`${GEMINI_URL}?key=${key}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -43,7 +46,11 @@ async function tryGemini(prompt) {
       contents: [{ parts: [{ text: prompt }] }],
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    console.error(`[ai-enhance-prompt] Gemini failed: ${res.status} ${res.statusText} — ${errBody.slice(0, 500)}`);
+    return null;
+  }
   const data = await res.json();
   const text = cleanText(data?.candidates?.[0]?.content?.parts?.[0]?.text);
   return text || null;
@@ -51,7 +58,10 @@ async function tryGemini(prompt) {
 
 async function tryGroq(prompt) {
   const key = process.env.GROQ_API_KEY;
-  if (!key) return null;
+  if (!key) {
+    console.error("[ai-enhance-prompt] Groq skipped: GROQ_API_KEY not set");
+    return null;
+  }
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: {
@@ -64,7 +74,11 @@ async function tryGroq(prompt) {
       temperature: 0.9,
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    console.error(`[ai-enhance-prompt] Groq failed: ${res.status} ${res.statusText} — ${errBody.slice(0, 500)}`);
+    return null;
+  }
   const data = await res.json();
   const text = cleanText(data?.choices?.[0]?.message?.content);
   return text || null;

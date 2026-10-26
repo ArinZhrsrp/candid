@@ -1,0 +1,172 @@
+name: Deploy to SFWORKS
+
+# SFWORKS Auto-Sync v2.1 workflow (no build: HTML/CSS/JS, PHP, Electron web files, Supabase/Firebase via CDN).
+# Per project, change ONLY the lines marked  # <-- CHANGE
+# Secrets (Settings > Secrets and variables > Actions):
+#   DEPLOY_SECRET    required, same 64-hex value as deploy_secret in config.php
+#   DEPLOY_USERNAME  only if the _deploy folder is password protected
+#   DEPLOY_PASSWORD  only if the _deploy folder is password protected
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sfworks-deploy
+  cancel-in-progress: false
+
+env:
+  DEPLOY_URL: https://candid.sfworks.top/_deploy/deploy.php  # <-- CHANGE
+
+jobs:
+  deploy:
+    name: Deploy to DirectAdmin
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send signed deployment request
+        shell: bash
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          DEPLOY_USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, hmac, json, os, sys, time
+          import urllib.error, urllib.request
+
+          def stop(msg, hint=""):
+              print("::error::" + msg)
+              if hint:
+                  print("HINT: " + hint)
+              sys.exit(1)
+
+          url = os.environ.get("DEPLOY_URL", "").strip()
+          secret = "".join(os.environ.get("DEPLOY_SECRET", "").split())
+          username = os.environ.get("DEPLOY_USERNAME", "").strip()
+          password = os.environ.get("DEPLOY_PASSWORD", "").strip()
+          repository = os.environ["GITHUB_REPOSITORY"]
+          source_branch = os.environ["GITHUB_REF_NAME"]
+          branch = os.environ.get("DEPLOY_BRANCH") or source_branch
+          commit = os.environ.get("DEPLOY_COMMIT") or os.environ["GITHUB_SHA"]
+
+          print("Endpoint  :", url)
+          print("Repository:", repository)
+          print("Branch    :", branch)
+          print("Commit    :", commit)
+
+          if source_branch != "main":
+              stop("This workflow only deploys the main branch (got '" + source_branch + "').",
+                   "Run the workflow again and choose branch main.")
+          if not url.startswith("https://") or "PROJECT" in url:
+              stop("DEPLOY_URL is not set correctly in deploy.yml.",
+                   "Edit the DEPLOY_URL line, e.g. https://pomopaw.sfworks.top/_deploy/deploy.php")
+          if not secret:
+              stop("Secret DEPLOY_SECRET is missing.",
+                   "Add it in Settings > Secrets and variables > Actions.")
+          if len(secret) != 64 or any(c not in "0123456789abcdef" for c in secret):
+              stop("DEPLOY_SECRET must be exactly 64 lowercase hex characters (0-9, a-f).",
+                   "Copy it again from config.php without quotes or spaces.")
+          if bool(username) != bool(password):
+              stop("Only one of DEPLOY_USERNAME / DEPLOY_PASSWORD is set.",
+                   "Set both (folder is password protected) or delete both (not protected).")
+
+          headers = {"User-Agent": "SFWORKS-GitHub-Actions/2.1"}
+          if username:
+              token = base64.b64encode((username + ":" + password).encode("utf-8")).decode("ascii")
+              headers["Authorization"] = "Basic " + token
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect)
+
+          def call(req, timeout):
+              try:
+                  with opener.open(req, timeout=timeout) as res:
+                      return res.status, res.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as err:
+                  return err.code, err.read().decode("utf-8", "replace")
+              except urllib.error.URLError as err:
+                  stop("Cannot connect to the endpoint: " + str(err.reason),
+                       "Check that the subdomain exists in DirectAdmin, and check DEPLOY_URL, DNS and SSL.")
+              except OSError as err:
+                  stop("No answer from the endpoint in time: " + str(err),
+                       "The web server may be restarting (for example right after creating a subdomain). Wait 2 minutes, then Re-run all jobs.")
+
+          def message_of(text):
+              try:
+                  data = json.loads(text)
+                  return data if isinstance(data, dict) else {}
+              except ValueError:
+                  return {}
+
+          # 1) Readiness check (GET). Changes nothing on the server.
+          code, text = call(urllib.request.Request(url, headers=headers, method="GET"), 30)
+          data = message_of(text)
+          if code == 401:
+              stop("HTTP 401 from the endpoint (folder password).",
+                   "DEPLOY_USERNAME / DEPLOY_PASSWORD do not match the Password Protected Directory, or are missing.")
+          if code in (301, 302, 303, 307, 308):
+              stop("The endpoint redirected (HTTP %d)." % code,
+                   "Use the exact https:// address in DEPLOY_URL and make sure SSL is active.")
+          if code == 404:
+              stop("HTTP 404: deploy.php not found at DEPLOY_URL.",
+                   "Check the subdomain Document Root and that _deploy/deploy.php exists.")
+          if code != 405 or data.get("message") != "POST required":
+              print(text[:500])
+              stop("Unexpected answer from the endpoint (HTTP %d)." % code,
+                   "Open DEPLOY_URL in a browser; it must show {\"message\":\"POST required\",...}.")
+          if "ready" in data:
+              failed = [k for k, v in data.get("checks", {}).items() if v is not True]
+              if failed:
+                  stop("Server is not ready: " + ", ".join(failed),
+                       "Fix these items on the hosting (see SOP troubleshooting), then run again.")
+              print("Readiness check: all OK")
+          else:
+              print("Readiness check not available (older deployer); continuing.")
+
+          # 2) Signed deployment request (POST).
+          body = json.dumps({"repository": repository, "branch": branch, "commit": commit},
+                            separators=(",", ":")).encode("utf-8")
+          ts = str(int(time.time()))
+          sig = hmac.new(secret.encode("utf-8"), ts.encode("utf-8") + b"." + body, hashlib.sha256).hexdigest()
+          post_headers = dict(headers)
+          post_headers.update({"Content-Type": "application/json",
+                               "X-Deploy-Timestamp": ts,
+                               "X-Deploy-Signature": sig})
+          code, text = call(urllib.request.Request(url, data=body, headers=post_headers, method="POST"), 170)
+          message = message_of(text).get("message", "")
+          print("HTTP:", code)
+          print("Response:", text[:500])
+
+          hints = {
+              "Invalid signature": "DEPLOY_SECRET in GitHub is different from deploy_secret in config.php.",
+              "Invalid timestamp": "Server clock is off by more than 60 seconds. Run again; if it repeats, contact the hosting.",
+              "Invalid request": "In config.php, github_owner + github_repo must equal '" + repository + "' and github_branch must equal '" + branch + "' (same capital letters).",
+              "Invalid secret": "deploy_secret in config.php must be 64 lowercase hex characters.",
+              "Config unavailable": "config.php is missing, or SITE_ROOT in deploy.php points to the wrong folder.",
+              "Incomplete config": "A required key in config.php is empty or missing.",
+              "Required directory unavailable": "deploy_path, backup_path or tmp/ folder does not exist.",
+              "Deployment already running": "Another deployment is running. Wait one minute and run again.",
+              "Archive download failed": "Repository must be Public and its ZIP under 50 MB (no large .exe/.zip files in the repo).",
+              "Valid index.html required": "index.html must be a real HTML page (with <!doctype html> or <html>).",
+              "not found in repository or sync_roots": "The entry file (index.html / index.php) must be in the repo root and listed in sync_roots.",
+              "Invalid entry_file": "entry_file must be 'index.html', or 'index.php' together with 'allow_php' => true.",
+              "Deployment size limit exceeded": "A synced file is over 10 MB, or all synced files are over 80 MB.",
+          }
+          if code == 200 and message.startswith("Auto-sync completed: "):
+              print("Deployment verified: " + message)
+              sys.exit(0)
+          hint = next((h for k, h in hints.items() if k in message), "")
+          if code == 401 and not message:
+              hint = "Folder password rejected. Check DEPLOY_USERNAME / DEPLOY_PASSWORD."
+          if code == 403 and not message:
+              hint = "Blocked by the hosting firewall (ModSecurity) or file permissions. Ask the hosting to check."
+          stop("Deployment failed (HTTP %d): %s" % (code, message or "no JSON message"), hint)
+          PY

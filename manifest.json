@@ -2,7 +2,7 @@
   "name": "CANDID — Prompt Engine POV Affiliate",
   "short_name": "CANDID",
   "description": "Jana prompt AI siap-copy untuk gambar & video produk POV.",
-  "start_url": "/candid-prompt-studio.html",
+  "start_url": "/studio/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#fdfbff",

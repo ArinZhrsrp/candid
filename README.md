@@ -21,11 +21,11 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Tech stack
 
-Plain HTML/CSS/JavaScript on the frontend — no build step, no framework. AI features are backed by a couple of small Vercel serverless functions (no database, no persistent backend state).
+Plain HTML/CSS/JavaScript on the frontend — no build step, no framework. AI features are backed by a couple of small serverless functions in `api/` (no database, no persistent backend state).
 
 ```
 index.html                  # landing/showcase page (marketing site)
-candid-prompt-studio.html   # the tool itself — markup/UI
+studio/index.html           # the tool itself (served at /studio/) — markup/UI
 css/landing.css             # landing page styling
 css/styles.css              # tool styling
 js/script.js                 # all app logic (state, prompt generation, AI tiers, storage)
@@ -36,7 +36,7 @@ media/                       # result images shown on the landing page (see medi
 
 ## Running locally
 
-Open `index.html` for the landing page, or `candid-prompt-studio.html` to go straight to the tool. The core prompt-generation tool works with no server at all — for the AI features, see below.
+Open `index.html` for the landing page, or `studio/index.html` to go straight to the tool. The core prompt-generation tool works with no server at all — for the AI features, see below.
 
 ```bash
 # optional: serve the static files instead of using file://
@@ -45,12 +45,11 @@ npx serve .
 
 ### AI features (optional)
 
-AI Mode (scene suggestions + prompt enhancement) needs the two `api/` serverless functions to actually run, which only happens via Vercel — a plain static server will 404 on `/api/*` and the app falls back to its local/offline behavior automatically (no crash, just less creative output).
+AI Mode (scene suggestions + prompt enhancement) needs the two `api/` serverless functions to actually run, which needs a Node serverless runtime — a plain static server will 404 on `/api/*` and the app falls back to its local/offline behavior automatically (no crash, just less creative output).
 
 1. Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey) (Gemini) and/or [Groq Console](https://console.groq.com/keys).
 2. Copy `.env.example` to `.env` and fill in `GEMINI_API_KEY` / `GROQ_API_KEY`.
-3. Run `npx vercel dev` instead of a plain static server, then open the tool at the URL it prints.
-4. For a real deployment, add the same two variables under the Vercel project's **Settings → Environment Variables**.
+3. Serve the project with a runtime that executes the `api/` functions, and set the same two variables as environment variables on the host.
 
 If neither key is available (or both providers fail/rate-limit), the app automatically falls back to an in-browser WebLLM model, then to the fully offline local generator — AI Mode never blocks you from generating a prompt.
 
